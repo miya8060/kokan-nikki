@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { FloatingCutie } from "@/components/ui/FloatingCutie";
 import { HeartCursor } from "@/components/ui/HeartCursor";
 import { Marquee } from "@/components/ui/Marquee";
@@ -5,8 +7,14 @@ import { PuffButton } from "@/components/ui/PuffButton";
 import { Sparkle } from "@/components/ui/Sparkle";
 import { Sticker } from "@/components/ui/Sticker";
 import { Tag } from "@/components/ui/Tag";
+import { auth } from "@/lib/auth";
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+  if (session?.user) {
+    redirect("/notebooks");
+  }
+
   return (
     <>
       <HeartCursor />
