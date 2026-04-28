@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { PuffButton } from "@/components/ui/PuffButton";
@@ -71,6 +72,16 @@ export default async function NotebookDetailPage({
             つぎの ばんの ひとが かいたら じゅんばんが まわってくるよ
           </p>
         )}
+        {/* F-INV-01: メンバーは招待 URL を発行できる。発行ページで実際の
+            createInvite を form 経由で呼ぶので、ここではページへの導線のみ */}
+        <div className="mt-4 text-center">
+          <Link
+            href={`/notebooks/${detail.id}/invite`}
+            className="text-ink-soft text-xs underline"
+          >
+            ♡ しょうたい りんくを はっこう する
+          </Link>
+        </div>
       </Sticker>
 
       <section className="flex flex-col gap-4">
