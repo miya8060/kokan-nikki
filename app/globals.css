@@ -150,6 +150,131 @@ body::before {
 }
 
 /* ─────────────────────────────────────────────
+ *  Component classes
+ *  Encoded here when Tailwind utilities can't
+ *  cleanly express the multi-layer offset shadows.
+ * ───────────────────────────────────────────── */
+@layer components {
+  .btn-puff {
+    appearance: none;
+    cursor: pointer;
+    border: none;
+    padding: 16px 30px;
+    font-family: var(--font-mochi), sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    background: linear-gradient(180deg, #fff 0%, #b8f0c8 100%);
+    border-radius: 999px;
+    box-shadow:
+      0 0 0 2px var(--ink) inset,
+      0 6px 0 var(--ink),
+      0 8px 18px rgba(44, 94, 68, 0.18);
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.6, 0.64, 1),
+      box-shadow 0.15s;
+    position: relative;
+  }
+  .btn-puff:hover {
+    transform: translateY(-3px) rotate(-1deg);
+  }
+  .btn-puff:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 0 0 2px var(--ink) inset,
+      0 1px 0 var(--ink),
+      0 2px 6px rgba(44, 94, 68, 0.2);
+  }
+  .btn-puff.alt {
+    background: linear-gradient(180deg, #fff 0%, #fff2b8 100%);
+  }
+
+  .sticker {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 22px;
+    box-shadow:
+      0 6px 0 var(--ink),
+      0 12px 30px rgba(44, 94, 68, 0.12);
+    position: relative;
+  }
+  .sticker.tape::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: 30px;
+    width: 80px;
+    height: 22px;
+    background: rgba(184, 240, 200, 0.8);
+    border: 1px dashed rgba(44, 94, 68, 0.25);
+    transform: rotate(-6deg);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  .sparkle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    background: #fff;
+    clip-path: polygon(
+      50% 0,
+      60% 40%,
+      100% 50%,
+      60% 60%,
+      50% 100%,
+      40% 60%,
+      0 50%,
+      40% 40%
+    );
+    box-shadow: 0 0 12px #fff;
+    animation: spark 2.4s ease-in-out infinite;
+  }
+
+  .marquee {
+    display: flex;
+    white-space: nowrap;
+    will-change: transform;
+    animation: mar 30s linear infinite;
+  }
+
+  .nav-pill {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    box-shadow: 0 4px 0 var(--ink);
+  }
+}
+
+/* ─────────────────────────────────────────────
+ *  Custom heart cursor
+ *  Activated by adding `heart-cursor-on` to <html>.
+ *  Cookie-driven gate lives in lib/palette.ts (step 11).
+ * ───────────────────────────────────────────── */
+.heart-cursor-on,
+.heart-cursor-on * {
+  cursor: none !important;
+}
+@media (hover: none) {
+  /* Touch devices keep the system cursor; HeartCursor component renders nothing. */
+  .heart-cursor-on,
+  .heart-cursor-on * {
+    cursor: auto !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
  *  Accessibility — prefers-reduced-motion
  *  Scoped to landing sections only so functional
  *  transitions (focus rings, save spinners) survive.
