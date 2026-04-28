@@ -1,11 +1,76 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { entryBodySchema } from "@/lib/schemas/entry";
+import { notebookNameSchema } from "@/lib/schemas/notebook";
 import { isUsersTurn } from "@/lib/turn";
+
+const createNotebookInputSchema = z.object({
+  name: notebookNameSchema,
+});
+
+export type CreateNotebookInput = z.infer<typeof createNotebookInputSchema>;
+
+export type CreateNotebookReason = "unauthenticated" | "invalid-input";
+
+export class CreateNotebookError extends Error {
+  readonly reason: CreateNotebookReason;
+
+  constructor(reason: CreateNotebookReason) {
+    super(reason);
+    this.name = "CreateNotebookError";
+    this.reason = reason;
+  }
+}
+
+export async function createNotebook(
+  input: CreateNotebookInput,
+): Promise<{ notebookId: string }> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    throw new CreateNotebookError("unauthenticated");
+  }
+
+  const parsed = createNotebookInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new CreateNotebookError("invalid-input");
+  }
+  const { name } = parsed.data;
+
+  // F-NB-03: 作成者を orderIndex=0 のメンバーとして同時に登録する。
+  // nested write で 1 トランザクションに包むことで、Notebook だけ生成されて
+  // メンバーが居ない宙ぶらりんな状態にならないようにする。
+  const notebook = await prisma.notebook.create({
+    data: {
+      name,
+      createdById: userId,
+      members: {
+        create: { userId, orderIndex: 0 },
+      },
+    },
+    select: { id: true },
+  });
+  return { notebookId: notebook.id };
+}
+
+// Form-action shim so <form action={createNotebookFromForm}> on the /notebooks
+// page can call createNotebook with a typed payload. Validation errors bubble
+// up to the framework error boundary; the typed action stays the place where
+// reasons are discriminated.
+export async function createNotebookFromForm(
+  formData: FormData,
+): Promise<void> {
+  const raw = formData.get("name");
+  await createNotebook({ name: typeof raw === "string" ? raw : "" });
+  revalidatePath("/notebooks");
+  redirect("/notebooks");
+}
 
 const postEntryInputSchema = z.object({
   notebookId: z.string().min(1),
