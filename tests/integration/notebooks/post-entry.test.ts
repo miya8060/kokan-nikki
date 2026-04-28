@@ -7,7 +7,8 @@ import { clearMockSession, setMockSession } from "@/tests/helpers/session";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { PostEntryError, postEntry } from "@/app/_actions/notebooks";
+import { PostEntryError } from "@/app/_actions/errors";
+import { postEntry } from "@/app/_actions/notebooks";
 import { makeEntry, makeNotebook, makeUser } from "@/tests/helpers/factories";
 import { getPrisma } from "@/tests/setup/db.per-test";
 
