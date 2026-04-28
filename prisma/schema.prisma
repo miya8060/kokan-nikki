@@ -1,0 +1,134 @@
+// kokan-nikki — Prisma schema
+// Auth.js v5 standard tables (User/Account/Session/VerificationToken)
+// + domain tables (Notebook/NotebookMember/Entry/Invite/Nudge).
+// Mirrors docs/requirements.md §6 and the implementation plan.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+//  Auth.js v5 standard tables
+// ─────────────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  accounts    Account[]
+  sessions    Session[]
+  memberships NotebookMember[]
+  entries     Entry[]
+  nudgesSent  Nudge[]          @relation("NudgeFrom")
+  nudgesRcvd  Nudge[]          @relation("NudgeTo")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────
+//  Domain tables
+// ─────────────────────────────────────────────
+model Notebook {
+  id          String   @id @default(cuid())
+  name        String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  members NotebookMember[]
+  entries Entry[]
+  invites Invite[]
+  nudges  Nudge[]
+}
+
+model NotebookMember {
+  notebookId String
+  userId     String
+  orderIndex Int
+  joinedAt   DateTime @default(now())
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notebookId, userId])
+  @@unique([notebookId, orderIndex])
+}
+
+model Entry {
+  id         String   @id @default(cuid())
+  notebookId String
+  authorId   String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id])
+
+  @@index([notebookId, createdAt])
+}
+
+model Invite {
+  id         String    @id @default(cuid())
+  notebookId String
+  code       String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+}
+
+model Nudge {
+  id         String   @id @default(cuid())
+  notebookId String
+  fromUserId String
+  toUserId   String
+  createdAt  DateTime @default(now())
+
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  fromUser User     @relation("NudgeFrom", fields: [fromUserId], references: [id])
+  toUser   User     @relation("NudgeTo", fields: [toUserId], references: [id])
+
+  @@index([notebookId, toUserId, createdAt])
+}
