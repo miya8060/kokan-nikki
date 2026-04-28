@@ -22,3 +22,7 @@ export const INVITE_TTL_MS = INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
 export function inviteExpiryFromNow(now: Date = new Date()): Date {
   return new Date(now.getTime() + INVITE_TTL_MS);
 }
+
+// C-05 / F-NB-02: 1 ノートあたりのメンバーは 2〜6 人。受諾アクションは Next 16
+// の "use server" 制約で値定数を export できないため、共有定数はここに置く。
+export const NOTEBOOK_MAX_MEMBERS = 6;

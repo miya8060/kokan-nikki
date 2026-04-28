@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
 import type { PrismaClient, User, Notebook, Entry, Invite } from "@prisma/client";
 
+import { generateInviteCode } from "@/lib/invites";
+
 // Factories take a PrismaClient explicitly so they're decoupled from the
 // per-test setup module — that lets unit tests construct fixtures in-memory
 // without booting the integration container.
@@ -60,14 +62,24 @@ export async function makeEntry(
 
 export async function makeInvite(
   prisma: PrismaClient,
-  args: { notebook: Notebook; expiresInDays?: number },
+  args: {
+    notebook: Notebook;
+    expiresInDays?: number;
+    expiresAt?: Date;
+    code?: string;
+  },
 ): Promise<Invite> {
+  // 既定は本番と同じ generator を通すことで、acceptInvite の zod 検証
+  // (INVITE_CODE_PATTERN) を素通りできるようにする。テスト固有の事情で
+  // 別フォーマットが要る場合のみ code を渡して上書きする。
   const days = args.expiresInDays ?? 7;
+  const expiresAt =
+    args.expiresAt ?? new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   return prisma.invite.create({
     data: {
       notebookId: args.notebook.id,
-      code: rand() + rand(),
-      expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
+      code: args.code ?? generateInviteCode(),
+      expiresAt,
     },
   });
 }
