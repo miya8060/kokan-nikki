@@ -1,6 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, inject } from "vitest";
 
+// Bridge the testcontainer URL into process.env BEFORE any test file imports
+// production modules: `@/lib/prisma` constructs its singleton from
+// `process.env.DATABASE_URL`, so without this hop the code under test would
+// silently target the dev DB (or fail to connect). setupFiles run after
+// globalSetup in the worker, so inject() is populated by this point.
+process.env.DATABASE_URL = inject("DATABASE_URL");
+
 // Lazy singleton: globalSetup provides DATABASE_URL via inject(), but Prisma
 // can't be constructed at module load because that would happen before
 // globalSetup runs. We build it on first access from a test file instead.
