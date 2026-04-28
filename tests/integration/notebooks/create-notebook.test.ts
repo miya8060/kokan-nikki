@@ -5,7 +5,8 @@ import { clearMockSession, setMockSession } from "@/tests/helpers/session";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { CreateNotebookError, createNotebook } from "@/app/_actions/notebooks";
+import { CreateNotebookError } from "@/app/_actions/errors";
+import { createNotebook } from "@/app/_actions/notebooks";
 import { makeUser } from "@/tests/helpers/factories";
 import { getPrisma } from "@/tests/setup/db.per-test";
 

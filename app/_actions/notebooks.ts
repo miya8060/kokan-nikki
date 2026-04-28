@@ -4,29 +4,22 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { CreateNotebookError, PostEntryError } from "@/app/_actions/errors";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { entryBodySchema } from "@/lib/schemas/entry";
 import { notebookNameSchema } from "@/lib/schemas/notebook";
 import { isUsersTurn } from "@/lib/turn";
 
+// Next 16 の "use server" 制約: このファイルからは async 関数しか export できない。
+// CreateNotebookError / PostEntryError と Reason 型の定義は ./errors.ts に逃がし、
+// テストや UI ハンドラはそちらから直接 import する。
+
 const createNotebookInputSchema = z.object({
   name: notebookNameSchema,
 });
 
-export type CreateNotebookInput = z.infer<typeof createNotebookInputSchema>;
-
-export type CreateNotebookReason = "unauthenticated" | "invalid-input";
-
-export class CreateNotebookError extends Error {
-  readonly reason: CreateNotebookReason;
-
-  constructor(reason: CreateNotebookReason) {
-    super(reason);
-    this.name = "CreateNotebookError";
-    this.reason = reason;
-  }
-}
+type CreateNotebookInput = z.infer<typeof createNotebookInputSchema>;
 
 export async function createNotebook(
   input: CreateNotebookInput,
@@ -77,26 +70,7 @@ const postEntryInputSchema = z.object({
   body: entryBodySchema,
 });
 
-export type PostEntryInput = z.infer<typeof postEntryInputSchema>;
-
-export type PostEntryReason =
-  | "unauthenticated"
-  | "invalid-input"
-  | "not-member"
-  | "not-your-turn";
-
-// Action-specific error so tests (and future UI handlers) can discriminate on
-// `reason` instead of brittle message matching. UI layer decides whether to
-// redirect to /auth/signin (unauthenticated) or render a 403 page.
-export class PostEntryError extends Error {
-  readonly reason: PostEntryReason;
-
-  constructor(reason: PostEntryReason) {
-    super(reason);
-    this.name = "PostEntryError";
-    this.reason = reason;
-  }
-}
+type PostEntryInput = z.infer<typeof postEntryInputSchema>;
 
 export async function postEntry(
   input: PostEntryInput,
@@ -133,4 +107,22 @@ export async function postEntry(
     select: { id: true },
   });
   return { entryId: entry.id };
+}
+
+// Form-action shim for /notebooks/[id]/write. The notebookId is bound at
+// render time (`postEntryFromForm.bind(null, notebookId)`) so it cannot be
+// spoofed via a hidden input. Validation/auth/turn errors bubble up to the
+// framework error boundary; the typed action is still where reasons are
+// discriminated by tests and future explicit handlers.
+export async function postEntryFromForm(
+  notebookId: string,
+  formData: FormData,
+): Promise<void> {
+  const raw = formData.get("body");
+  await postEntry({
+    notebookId,
+    body: typeof raw === "string" ? raw : "",
+  });
+  revalidatePath(`/notebooks/${notebookId}`);
+  redirect(`/notebooks/${notebookId}`);
 }
