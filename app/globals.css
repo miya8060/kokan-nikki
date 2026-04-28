@@ -1,26 +1,163 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────
+ *  Dreamy Pixel design tokens
+ *  Source: design_handoff_dreamy_pixel/index.html
+ *  Palette swaps mutate these on <html> via cookie
+ * ───────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-1: #ffe8f1;
+  --bg-2: #fff6c2;
+  --bg-3: #d8f5e3;
+  --bg-4: #d4f1ff;
+
+  --pink: #ff8fbf;
+  --pink-2: #ff5ea8;
+  --lav: #b59cff;
+  --lemon: #ffd56b;
+  --mint: #5cd6a8;
+  --mint-2: #b8f0c8;
+
+  --ink: #4b2c5e;
+  --ink-soft: #7a5a8e;
+  --paper: #fffcf4;
 }
 
+/* Expose design tokens to Tailwind v4 utilities (bg-pink, text-ink, etc.).
+ * `inline` keeps the values as `var(--…)` references so palette swaps cascade. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+  --color-bg-4: var(--bg-4);
+  --color-pink: var(--pink);
+  --color-pink-2: var(--pink-2);
+  --color-lav: var(--lav);
+  --color-lemon: var(--lemon);
+  --color-mint: var(--mint);
+  --color-mint-2: var(--mint-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-paper: var(--paper);
+
+  --font-mochi: var(--font-mochi);
+  --font-maru: var(--font-maru);
+  --font-pixel: var(--font-pixel);
+  --font-hand: var(--font-hand);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* sticky-scroll layouts require `clip` (not `hidden`) so position:sticky works */
+  overflow-x: clip;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  font-family: var(--font-maru), var(--font-mochi), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: clip;
+  background:
+    radial-gradient(1200px 700px at 10% -10%, #ffd6ec 0%, transparent 60%),
+    radial-gradient(1100px 700px at 110% 20%, #b8f0c8 0%, transparent 60%),
+    radial-gradient(900px 700px at 50% 110%, #fff2b8 0%, transparent 60%),
+    linear-gradient(180deg, #ffeef6 0%, #eef9f3 100%);
+}
+
+/* Sticker dot overlay — fixed across the whole viewport behind content */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(
+    circle at 20px 20px,
+    rgba(255, 143, 191, 0.25) 1.6px,
+    transparent 2px
+  );
+  background-size: 28px 28px;
+  opacity: 0.5;
+}
+
+/* ─────────────────────────────────────────────
+ *  Keyframes (Y2K motion vocabulary)
+ * ───────────────────────────────────────────── */
+@keyframes spark {
+  0%,
+  100% {
+    transform: scale(0.6) rotate(0deg);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.3) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translateY(-14px) rotate(calc(var(--r, 0deg) + 6deg));
+  }
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+@keyframes mar {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ─────────────────────────────────────────────
+ *  Accessibility — prefers-reduced-motion
+ *  Scoped to landing sections only so functional
+ *  transitions (focus rings, save spinners) survive.
+ *  See requirements NF-A11Y-01 + testing.md §6.4.
+ * ───────────────────────────────────────────── */
+.reduce-motion .landing-section *,
+.reduce-motion .landing-section *::before,
+.reduce-motion .landing-section *::after {
+  animation: none !important;
+  transition: none !important;
 }

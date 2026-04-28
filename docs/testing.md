@@ -1,61 +1,64 @@
 # kokan-nikki テスト戦略
 
-| 項目 | 内容 |
-|---|---|
-| 関連要件 | `docs/requirements.md`（v0.1） |
+| 項目           | 内容                                                                         |
+| -------------- | ---------------------------------------------------------------------------- |
+| 関連要件       | `docs/requirements.md`（v0.1）                                               |
 | 関連実装プラン | `~/.claude/plans/users-yuki-downloads-design-handoff-dre-vivid-matsumoto.md` |
-| バージョン | 0.1（MVP テスト戦略） |
-| 最終更新 | 2026-04-29 |
-| ステータス | 確定（実装着手前） |
+| バージョン     | 0.1（MVP テスト戦略）                                                        |
+| 最終更新       | 2026-04-29                                                                   |
+| ステータス     | 確定（実装着手前）                                                           |
 
 ---
 
 ## 1. 背景・目的
 
 ### 1.1 背景
+
 kokan-nikki の事業価値の中核は、「ターン制」「招待の atomic claim」「ナッジの 24h クールダウン」という **DB と密結合した時間・並行制約のドメインロジック** にある。これらは UI を眺めても挙動が見えず、純粋関数だけで再現することもできない。実装着手前にテスト方針が曖昧なまま進めると、`F-INV-08`（同時受諾）や `F-NUDGE-02`（24h クールダウン）といった「実機では滅多に踏まないが踏むと致命的」な欠陥が混入する。
 
 ### 1.2 目的
+
 - 要件定義書の F-/NF- ID を起点に、テストでカバーすべき責務を **テスト種別ごとに明確化** する
 - 単体／結合／E2E／手動探索の **配置・ツール・実行コマンド** を確定し、実装と並走できる状態にする
 - CI で守るべき品質ゲート（カバレッジ閾値・必須 jobs）を定め、ブランチ保護に直結させる
 - Playwright MCP（手動・探索的検証）と CI 自動 E2E の **二層運用** を制度化する
 
 ### 1.3 前提
+
 - 投資バランス: **バランス型ピラミッド**（単体 + 結合 + E2E）
 - DB 戦略: **Testcontainers** でテストごとに Postgres 16 を起動・破棄
 - 認証: マジックリンクは結合テストで検証、E2E は **`Session` テーブルへ直接 INSERT + Cookie 注入** で迂回
 - 外部依存: Resend SDK は **完全モック**（`vi.mock` または MSW）。実メール送信は CI で発生させない
-- カバレッジゲートは **`lib/**` と `app/_actions/**` のみ**。UI 層（演出を含む components / page / layout）は計測対象外
+- カバレッジゲートは **`lib/**`と`app/\_actions/**` のみ**。UI 層（演出を含む components / page / layout）は計測対象外
 
 ---
 
 ## 2. 戦略の方針
 
-| 方針 | 内容 |
-|---|---|
-| ID 駆動 | 各テストは `docs/requirements.md` の F-/NF- ID をテスト名コメントまたは describe 名に明示し、§5 のマッピング表で双方向にトレース可能とする |
-| ピラミッド | 速くて多い単体 → DB を含む結合 → 数を絞った E2E。詳細ロジックは結合に寄せる（DB と一体で意味を持つため） |
-| 純粋関数の切り出し | DB クエリを含む関数からは「純粋計算部分」を別 export し、単体に落とす（例: `lib/turn.ts` の `pickNextOrderIndex`） |
-| Testcontainers 基盤 | 結合・E2E の DB は本番と同じ Postgres 16。SQLite で代替しない |
-| Resend 完全モック | テスト中に実 API を叩かない。`vi.mock("resend")` または MSW で `https://api.resend.com/emails` を握る |
-| 並行性検証 | F-INV-08 / NF-CON-01 は `Promise.allSettled` で 2 トランザクションを発火し、片方だけが成功することを assert する |
-| 時間モック非依存 | `vi.useFakeTimers()` は Prisma との相性問題があるため避け、テストでは `Nudge.create` 等で `createdAt` を直接打ち込む |
+| 方針                | 内容                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| ID 駆動             | 各テストは `docs/requirements.md` の F-/NF- ID をテスト名コメントまたは describe 名に明示し、§5 のマッピング表で双方向にトレース可能とする |
+| ピラミッド          | 速くて多い単体 → DB を含む結合 → 数を絞った E2E。詳細ロジックは結合に寄せる（DB と一体で意味を持つため）                                   |
+| 純粋関数の切り出し  | DB クエリを含む関数からは「純粋計算部分」を別 export し、単体に落とす（例: `lib/turn.ts` の `pickNextOrderIndex`）                         |
+| Testcontainers 基盤 | 結合・E2E の DB は本番と同じ Postgres 16。SQLite で代替しない                                                                              |
+| Resend 完全モック   | テスト中に実 API を叩かない。`vi.mock("resend")` または MSW で `https://api.resend.com/emails` を握る                                      |
+| 並行性検証          | F-INV-08 / NF-CON-01 は `Promise.allSettled` で 2 トランザクションを発火し、片方だけが成功することを assert する                           |
+| 時間モック非依存    | `vi.useFakeTimers()` は Prisma との相性問題があるため避け、テストでは `Nudge.create` 等で `createdAt` を直接打ち込む                       |
 
 ---
 
 ## 3. ツールスタック
 
-| 種別 | ツール | 役割 |
-|---|---|---|
-| 単体・結合ランナー | Vitest | ESM ネイティブ、Next.js 15 と相性が良い |
-| カバレッジ | `@vitest/coverage-v8` | 閾値ゲートと cobertura レポート |
-| E2E ブラウザ | Playwright Test | Chromium 1 ブラウザに絞る（MVP） |
-| 結合用 DB | `@testcontainers/postgresql` | テストファイル単位で Postgres 16 を起動・破棄 |
-| 外部依存モック | `vi.mock` + MSW | Resend SDK は `vi.mock`、E2E では MSW で HTTP を握る |
-| アクセシビリティ | `@axe-core/playwright` | E2E 内で主要画面に axe を流す |
-| 探索的・手動確認 | **Playwright MCP** | Claude / 開発者が dev サーバを実ブラウザで操作。CI には載せない |
-| CI | GitHub Actions（`pr.yml`） | lint / unit / integration / e2e / cov-gate の 5 jobs |
+| 種別               | ツール                       | 役割                                                            |
+| ------------------ | ---------------------------- | --------------------------------------------------------------- |
+| 単体・結合ランナー | Vitest                       | ESM ネイティブ、Next.js 15 と相性が良い                         |
+| カバレッジ         | `@vitest/coverage-v8`        | 閾値ゲートと cobertura レポート                                 |
+| E2E ブラウザ       | Playwright Test              | Chromium 1 ブラウザに絞る（MVP）                                |
+| 結合用 DB          | `@testcontainers/postgresql` | テストファイル単位で Postgres 16 を起動・破棄                   |
+| 外部依存モック     | `vi.mock` + MSW              | Resend SDK は `vi.mock`、E2E では MSW で HTTP を握る            |
+| アクセシビリティ   | `@axe-core/playwright`       | E2E 内で主要画面に axe を流す                                   |
+| 探索的・手動確認   | **Playwright MCP**           | Claude / 開発者が dev サーバを実ブラウザで操作。CI には載せない |
+| CI                 | GitHub Actions（`pr.yml`）   | lint / unit / integration / e2e / cov-gate の 5 jobs            |
 
 ### 3.1 Playwright MCP の位置付け
 
@@ -104,12 +107,12 @@ kokan-nikki の事業価値の中核は、「ターン制」「招待の atomic 
 - **Resend**: `vi.mock` ではなく **MSW を Node 側で立てる**。`https://api.resend.com/emails` を 200 で握り、`tests/e2e/helpers/resend-mock.ts` から呼び出し履歴を取得可能に
 - **シナリオ（最小 4 本）**:
 
-| ID | 名前 | 対応要件 |
-|---|---|---|
-| e2e-01 | UC-01 抜粋: ノート作成 → 招待発行 → 受諾 → A 投稿 → B 投稿 → ターンが回る | F-NB-01〜04 / F-INV-01〜06 / F-TURN-01〜04 |
-| e2e-02 | UC-02 抜粋: ナッジを押す → 24h 内の再送が UI で disabled | F-NUDGE-01〜03 |
-| e2e-03 | ターンガード: B のターン中に A が `/notebooks/[id]/write` 直アクセス → notFound or redirect | F-TURN-05 / NF-SEC-04 |
-| e2e-04 | ランディング & a11y: 9 セクションが mount + axe 違反 0 + `prefers-reduced-motion: reduce` でランディングのみアニメ停止 | F-LP-01〜03 / NF-A11Y-01 |
+| ID     | 名前                                                                                                                   | 対応要件                                   |
+| ------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| e2e-01 | UC-01 抜粋: ノート作成 → 招待発行 → 受諾 → A 投稿 → B 投稿 → ターンが回る                                              | F-NB-01〜04 / F-INV-01〜06 / F-TURN-01〜04 |
+| e2e-02 | UC-02 抜粋: ナッジを押す → 24h 内の再送が UI で disabled                                                               | F-NUDGE-01〜03                             |
+| e2e-03 | ターンガード: B のターン中に A が `/notebooks/[id]/write` 直アクセス → notFound or redirect                            | F-TURN-05 / NF-SEC-04                      |
+| e2e-04 | ランディング & a11y: 9 セクションが mount + axe 違反 0 + `prefers-reduced-motion: reduce` でランディングのみアニメ停止 | F-LP-01〜03 / NF-A11Y-01                   |
 
 - 各シナリオは独立した DB スキーマ（per-worker DB）で並列実行可能にする
 
@@ -133,34 +136,34 @@ kokan-nikki の事業価値の中核は、「ターン制」「招待の atomic 
 
 ## 5. 要件IDマッピング表
 
-| 要件 ID | 単体 | 結合 | E2E自動 | MCP/手動 |
-|---|---|---|---|---|
-| F-AUTH-01〜04 | — | ◎ マジックリンク → Session 発行 | △ Cookie 注入で迂回 | ○ |
-| F-NB-01〜04 | — | ◎ | ◎ | ○ |
-| F-INV-01〜07 | — | ◎ | ○ 受諾フロー | ○ |
-| **F-INV-08** | — | ◎ Promise.allSettled 排他性 | — | — |
-| F-TURN-01〜04 | ◎ 純粋計算部分 | ◎ | ○ | ○ |
-| F-TURN-05 | — | ◎ | ◎ | ○ |
-| F-EDIT-01〜02 | ◎ zod 境界値 | ◎ | ○ | ○ |
-| F-EDIT-03 | — | ◎ 編集・削除エンドポイント不在の確認 | — | — |
-| F-NUDGE-01〜03 | — | ◎ 24h クールダウン | ○ | ○ |
-| F-NUDGE-04 | — | ◎ Cron + Resend モック | — | △ Cron 手動 curl |
-| F-LP-01〜04 | — | — | ○ mount 確認 | ◎ 演出は MCP 目視 |
-| F-SET-01〜02 | ◎ cookie ヘルパ | ○ | △ | ○ |
-| NF-PERF-01〜02 | — | — | △ 計測のみ・ゲートなし | ○ |
-| NF-SEC-01 | — | ○ AUTH_SECRET 未設定で起動失敗 | — | — |
-| NF-SEC-02 | — | ◎ Cron に Bearer 不在で 401 | — | — |
-| NF-SEC-03 | ◎ zod スキーマ | ◎ Server Action 入力検証 | ○ | — |
-| NF-SEC-04 | — | ◎ 他人ノートに POST → 403 | ○ | — |
-| NF-SEC-05 | ◎ nanoid(12) 長さ・文字種 | — | — | — |
-| NF-CON-01 | — | ◎ F-INV-08 と併走 | — | — |
-| NF-CON-02 | ◎ id タイブレーカー | ○ | — | — |
-| NF-A11Y-01 | — | — | ◎ emulateMedia + axe | ○ |
-| NF-A11Y-02 | — | — | ◎ axe で aria-hidden 検出 | ○ |
-| NF-A11Y-03 | ◎ cookie ヘルパ | — | △ | ○ |
-| NF-DEV-01〜02 | — | — | △ Chromium のみ | ○ 他ブラウザは MCP 手動 |
-| NF-LNG-01 | — | — | — | ○ |
-| NF-OPS-01〜03 | — | — | — | — 環境設定の事項 |
+| 要件 ID        | 単体                      | 結合                                 | E2E自動                   | MCP/手動                |
+| -------------- | ------------------------- | ------------------------------------ | ------------------------- | ----------------------- |
+| F-AUTH-01〜04  | —                         | ◎ マジックリンク → Session 発行      | △ Cookie 注入で迂回       | ○                       |
+| F-NB-01〜04    | —                         | ◎                                    | ◎                         | ○                       |
+| F-INV-01〜07   | —                         | ◎                                    | ○ 受諾フロー              | ○                       |
+| **F-INV-08**   | —                         | ◎ Promise.allSettled 排他性          | —                         | —                       |
+| F-TURN-01〜04  | ◎ 純粋計算部分            | ◎                                    | ○                         | ○                       |
+| F-TURN-05      | —                         | ◎                                    | ◎                         | ○                       |
+| F-EDIT-01〜02  | ◎ zod 境界値              | ◎                                    | ○                         | ○                       |
+| F-EDIT-03      | —                         | ◎ 編集・削除エンドポイント不在の確認 | —                         | —                       |
+| F-NUDGE-01〜03 | —                         | ◎ 24h クールダウン                   | ○                         | ○                       |
+| F-NUDGE-04     | —                         | ◎ Cron + Resend モック               | —                         | △ Cron 手動 curl        |
+| F-LP-01〜04    | —                         | —                                    | ○ mount 確認              | ◎ 演出は MCP 目視       |
+| F-SET-01〜02   | ◎ cookie ヘルパ           | ○                                    | △                         | ○                       |
+| NF-PERF-01〜02 | —                         | —                                    | △ 計測のみ・ゲートなし    | ○                       |
+| NF-SEC-01      | —                         | ○ AUTH_SECRET 未設定で起動失敗       | —                         | —                       |
+| NF-SEC-02      | —                         | ◎ Cron に Bearer 不在で 401          | —                         | —                       |
+| NF-SEC-03      | ◎ zod スキーマ            | ◎ Server Action 入力検証             | ○                         | —                       |
+| NF-SEC-04      | —                         | ◎ 他人ノートに POST → 403            | ○                         | —                       |
+| NF-SEC-05      | ◎ nanoid(12) 長さ・文字種 | —                                    | —                         | —                       |
+| NF-CON-01      | —                         | ◎ F-INV-08 と併走                    | —                         | —                       |
+| NF-CON-02      | ◎ id タイブレーカー       | ○                                    | —                         | —                       |
+| NF-A11Y-01     | —                         | —                                    | ◎ emulateMedia + axe      | ○                       |
+| NF-A11Y-02     | —                         | —                                    | ◎ axe で aria-hidden 検出 | ○                       |
+| NF-A11Y-03     | ◎ cookie ヘルパ           | —                                    | △                         | ○                       |
+| NF-DEV-01〜02  | —                         | —                                    | △ Chromium のみ           | ○ 他ブラウザは MCP 手動 |
+| NF-LNG-01      | —                         | —                                    | —                         | ○                       |
+| NF-OPS-01〜03  | —                         | —                                    | —                         | — 環境設定の事項        |
 
 凡例: ◎=主担当 / ○=補助 / △=軽くカバー / —=対象外
 
@@ -193,13 +196,13 @@ const [a, b] = await Promise.allSettled([
 
 ### 6.3 F-TURN ターン判定 5 ケース（lib/turn.ts）
 
-| # | ケース | 期待 |
-|---|---|---|
-| 1 | メンバー 0 名 | `null` |
-| 2 | メンバーあり、エントリ 0 件 | orderIndex = 0 のメンバー（F-TURN-03） |
-| 3 | 中間（lastIdx 0〜n-1） | lastIdx + 1（F-TURN-02） |
-| 4 | 末尾（lastIdx === n-1） | 0 にラップ |
-| 5 | 脱退者最新（authorId が現メンバーに居ない） | 0 |
+| #   | ケース                                      | 期待                                   |
+| --- | ------------------------------------------- | -------------------------------------- |
+| 1   | メンバー 0 名                               | `null`                                 |
+| 2   | メンバーあり、エントリ 0 件                 | orderIndex = 0 のメンバー（F-TURN-03） |
+| 3   | 中間（lastIdx 0〜n-1）                      | lastIdx + 1（F-TURN-02）               |
+| 4   | 末尾（lastIdx === n-1）                     | 0 にラップ                             |
+| 5   | 脱退者最新（authorId が現メンバーに居ない） | 0                                      |
 
 - DB クエリを含むので 2〜5 は結合に置く
 - 純粋計算部分（`pickNextOrderIndex(members: Member[], latestAuthorId: string|null)`）を切り出して単体でテストする
@@ -230,12 +233,12 @@ const [a, b] = await Promise.allSettled([
 
 ## 8. カバレッジ目標と CI ゲート
 
-| 範囲 | line | branch | 備考 |
-|---|---|---|---|
-| `lib/**` | 80% | 75% | 純ロジックの守りライン |
-| `app/_actions/**` | 70% | 65% | DB と Auth が絡むぶん少し緩く |
-| `app/api/cron/**` | 70% | 65% | Cron ハンドラ |
-| 上記以外（`components/**`、`app/**` の page/layout） | 計測対象外 | — | UI 演出は手動 + axe |
+| 範囲                                                 | line       | branch | 備考                          |
+| ---------------------------------------------------- | ---------- | ------ | ----------------------------- |
+| `lib/**`                                             | 80%        | 75%    | 純ロジックの守りライン        |
+| `app/_actions/**`                                    | 70%        | 65%    | DB と Auth が絡むぶん少し緩く |
+| `app/api/cron/**`                                    | 70%        | 65%    | Cron ハンドラ                 |
+| 上記以外（`components/**`、`app/**` の page/layout） | 計測対象外 | —      | UI 演出は手動 + axe           |
 
 - レポート: `v8` プロバイダ、`text` + `cobertura` を出力。CI で artifacts に保存
 - ゲート違反は CI fail
