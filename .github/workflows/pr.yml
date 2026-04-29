@@ -26,12 +26,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Defensive: package.json's `pnpm.onlyBuiltDependencies` whitelists
-      # @prisma/client so its postinstall (`prisma generate`) should run on
-      # install, but the hook silently skipped after main pulled in
-      # @playwright/test / msw deps in 7f88995. Generating explicitly keeps
-      # CI green regardless of whether the postinstall fires.
-      - run: pnpm exec prisma generate
       - run: pnpm lint
       - run: pnpm typecheck
 
@@ -47,12 +41,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Defensive: package.json's `pnpm.onlyBuiltDependencies` whitelists
-      # @prisma/client so its postinstall (`prisma generate`) should run on
-      # install, but the hook silently skipped after main pulled in
-      # @playwright/test / msw deps in 7f88995. Generating explicitly keeps
-      # CI green regardless of whether the postinstall fires.
-      - run: pnpm exec prisma generate
       - run: pnpm test:unit
 
   integration:
@@ -67,12 +55,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Defensive: package.json's `pnpm.onlyBuiltDependencies` whitelists
-      # @prisma/client so its postinstall (`prisma generate`) should run on
-      # install, but the hook silently skipped after main pulled in
-      # @playwright/test / msw deps in 7f88995. Generating explicitly keeps
-      # CI green regardless of whether the postinstall fires.
-      - run: pnpm exec prisma generate
       # Testcontainers spins Postgres on the runner's Docker daemon —
       # no `services:` block needed (testing.md §9).
       - run: pnpm test:int --coverage
@@ -95,12 +77,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Defensive: package.json's `pnpm.onlyBuiltDependencies` whitelists
-      # @prisma/client so its postinstall (`prisma generate`) should run on
-      # install, but the hook silently skipped after main pulled in
-      # @playwright/test / msw deps in 7f88995. Generating explicitly keeps
-      # CI green regardless of whether the postinstall fires.
-      - run: pnpm exec prisma generate
       - run: pnpm exec playwright install --with-deps chromium
       # tests/e2e/global-setup.ts handles Postgres + migrate + build +
       # next start + readiness polling itself; no extra env wiring here.
