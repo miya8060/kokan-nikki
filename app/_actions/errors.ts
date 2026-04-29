@@ -71,3 +71,15 @@ export class AcceptInviteError extends Error {
     this.reason = reason;
   }
 }
+
+export type SettingsReason = "invalid-input";
+
+export class SettingsError extends Error {
+  readonly reason: SettingsReason;
+
+  constructor(reason: SettingsReason) {
+    super(reason);
+    this.name = "SettingsError";
+    this.reason = reason;
+  }
+}
