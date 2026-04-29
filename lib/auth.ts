@@ -5,6 +5,18 @@ import Resend from "next-auth/providers/resend";
 import { sendMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
+// NF-SEC-01: Auth.js v5 (5.0.0-beta.31) は AUTH_SECRET 不在でも
+// NextAuth(config) は throw せず、最初のリクエスト時に MissingSecret を返す
+// だけ。Vercel 側で env が外れている等の事故を「最初の magic-link 要求まで
+// 気付けない」状態にしないため、モジュール読込時に fail-fast で落とす。
+if (!process.env.AUTH_SECRET) {
+  throw new Error(
+    "AUTH_SECRET is required to initialize @/lib/auth. " +
+      "Set AUTH_SECRET in the environment (.env.local for dev, Vercel project " +
+      "settings for prod) before importing this module.",
+  );
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "database" },
