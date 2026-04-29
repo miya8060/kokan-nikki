@@ -32,6 +32,46 @@ export class PostEntryError extends Error {
   }
 }
 
+export type CreateInviteReason =
+  | "unauthenticated"
+  | "invalid-input"
+  | "not-member";
+
+export class CreateInviteError extends Error {
+  readonly reason: CreateInviteReason;
+
+  constructor(reason: CreateInviteReason) {
+    super(reason);
+    this.name = "CreateInviteError";
+    this.reason = reason;
+  }
+}
+
+// AcceptInviteError は requirements.md UC-04 の "InviteUnavailableError" と同じ
+// 役割を担う。reason を細分化することで、ページ側で「期限切れ」「使用済み」
+// 「満員」を出し分けられるようにしている。
+//   - invalid-code : 該当コードが存在しない
+//   - expired      : expiresAt が過去 (F-INV-02)
+//   - already-used : usedAt が既にセット済み or atomic claim にレース敗北 (F-INV-03 / F-INV-08)
+//   - notebook-full: メンバー数が上限 6 に達している (F-INV-07 / F-NB-02 / C-05)
+export type AcceptInviteReason =
+  | "unauthenticated"
+  | "invalid-input"
+  | "invalid-code"
+  | "expired"
+  | "already-used"
+  | "notebook-full";
+
+export class AcceptInviteError extends Error {
+  readonly reason: AcceptInviteReason;
+
+  constructor(reason: AcceptInviteReason) {
+    super(reason);
+    this.name = "AcceptInviteError";
+    this.reason = reason;
+  }
+}
+
 export type SettingsReason = "invalid-input";
 
 export class SettingsError extends Error {
