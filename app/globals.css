@@ -387,23 +387,4 @@ body::before {
   .cutie-float {
     animation: none !important;
   }
-  /* Decorative animation inside any landing section freezes (NF-A11Y-01).
-   * Functional `transition` on buttons (focus rings, hover lift, press feedback)
-   * is intentionally untouched — see testing.md §6.4. */
-  .landing-section,
-  .landing-section *,
-  .landing-section *::before,
-  .landing-section *::after {
-    animation: none !important;
-  }
-  /* Boot/Typewriter use opacity/clip-path as their initial keyframe state.
-   * Killing the animation alone would leave them invisible — restore the
-   * visible end-state explicitly. */
-  .landing-section .boot-line {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-  .landing-section .typewriter {
-    clip-path: none !important;
-  }
 }
