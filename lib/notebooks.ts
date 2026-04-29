@@ -27,6 +27,9 @@ export type NotebookDetail = {
   nextTurnDisplayName: string | null;
   isViewerMember: true;
   isYourTurn: boolean;
+  // F-NUDGE-02 のレートリミットを UI が予測表示するための値。viewer から
+  // 現ターン者への直近ナッジ時刻 (なければ null)。24h 経過判定はページ側で行う。
+  viewerLastNudgeAt: Date | null;
 };
 
 function displayNameOf(user: { name: string | null; email: string }): string {
@@ -89,6 +92,23 @@ export async function getNotebookDetail(
       ? null
       : (members.find((m) => m.orderIndex === nextOrderIndex) ?? null);
 
+  // viewer が現ターン者宛に直近送ったナッジ時刻。ページ側でレートリミット
+  // (24h) の予測表示に使う。viewer 自身が現ターン者の場合や送信先が居ない
+  // 場合は引かない。
+  let viewerLastNudgeAt: Date | null = null;
+  if (nextMember && nextMember.userId !== viewerUserId) {
+    const last = await prisma.nudge.findFirst({
+      where: {
+        notebookId: notebook.id,
+        fromUserId: viewerUserId,
+        toUserId: nextMember.userId,
+      },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    viewerLastNudgeAt = last?.createdAt ?? null;
+  }
+
   return {
     id: notebook.id,
     name: notebook.name,
@@ -98,5 +118,6 @@ export async function getNotebookDetail(
     nextTurnDisplayName: nextMember?.displayName ?? null,
     isViewerMember: true,
     isYourTurn: nextMember?.userId === viewerUserId,
+    viewerLastNudgeAt,
   };
 }

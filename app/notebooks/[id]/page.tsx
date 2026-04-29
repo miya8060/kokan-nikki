@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { sendNudgeFromForm } from "@/app/_actions/nudges";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { auth } from "@/lib/auth";
 import { getNotebookDetail } from "@/lib/notebooks";
+import { NUDGE_RATE_LIMIT_MS } from "@/lib/nudges";
 
 // F-TURN-04: タイムラインは新しい順。F-TURN-05 の UI 側ガードは /write 側で
 // 行うため、ここでは「自分のターンのときだけ書き込み導線を出す」までに留める。
+// F-NUDGE-01〜02: ターン外のメンバーには「もう書いた？」ボタンを出す。
+// 24h 以内に送信済みならボタンを無効化して案内を出す (NUDGE_RATE_LIMIT_MS)。
 
 const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
   // C-04: 表示は Asia/Tokyo、内部は UTC のまま。
@@ -67,6 +71,28 @@ export default async function NotebookDetailPage({
               ♡ きょうの にっきを かく
             </PuffButton>
           </div>
+        ) : detail.nextTurnUserId !== null ? (
+          (() => {
+            // F-NUDGE-02: 24h 以内に送信済みならボタンを disabled にする。
+            // (lint: Date.now() は impure 扱いなので new Date() を使う。)
+            const nextSendableAt =
+              detail.viewerLastNudgeAt === null
+                ? null
+                : new Date(
+                    detail.viewerLastNudgeAt.getTime() + NUDGE_RATE_LIMIT_MS,
+                  );
+            const rateLimited =
+              nextSendableAt !== null &&
+              nextSendableAt.getTime() > new Date().getTime();
+            return (
+              <NudgeBlock
+                notebookId={detail.id}
+                nextTurnDisplayName={detail.nextTurnDisplayName}
+                nextSendableAt={nextSendableAt}
+                rateLimited={rateLimited}
+              />
+            );
+          })()
         ) : (
           <p className="text-ink-soft mt-4 text-center text-xs">
             つぎの ばんの ひとが かいたら じゅんばんが まわってくるよ
@@ -119,5 +145,41 @@ export default async function NotebookDetailPage({
         )}
       </section>
     </main>
+  );
+}
+
+function NudgeBlock({
+  notebookId,
+  nextTurnDisplayName,
+  nextSendableAt,
+  rateLimited,
+}: {
+  notebookId: string;
+  nextTurnDisplayName: string | null;
+  nextSendableAt: Date | null;
+  rateLimited: boolean;
+}) {
+  // race を弾くのはあくまでサーバー側 (sendNudge) なので、ここの rateLimited は
+  // UX ヒント (24h 以内に送信済みのときだけ disable) でしかない。
+  const submitAction = sendNudgeFromForm.bind(null, notebookId);
+
+  return (
+    <div className="mt-4 flex flex-col items-center gap-2">
+      <p className="text-ink-soft text-center text-xs">
+        つぎの ばんは{" "}
+        <strong className="text-ink">{nextTurnDisplayName ?? "—"}</strong>{" "}
+        だよ
+      </p>
+      <form action={submitAction}>
+        <PuffButton type="submit" variant="alt" disabled={rateLimited}>
+          ♡ もう かいた？ って つつく
+        </PuffButton>
+      </form>
+      {rateLimited && nextSendableAt && (
+        <p className="text-ink-soft text-center text-[11px]">
+          つぎに つつけるのは {dateFormatter.format(nextSendableAt)} から
+        </p>
+      )}
+    </div>
   );
 }
