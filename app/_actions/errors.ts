@@ -83,3 +83,28 @@ export class SettingsError extends Error {
     this.reason = reason;
   }
 }
+
+// F-NUDGE-01〜03 のサーバー側挙動を表現する。受信者は「現ターンの人」
+// 一意に決まるためサーバー側で導出する設計にしており、UI からは toUserId を
+// 受け取らない。そのため「自己宛」「ターン者以外宛」のエラーは発生しない。
+//   - not-member       : NF-SEC-04 のメンバーシップ検証で弾かれた
+//   - no-active-turn   : ノートにメンバーが居ない / ターン者を特定できない (防御的)
+//   - not-current-turn : 自分が現ターンなので、自分はナッジを送る側ではない (F-NUDGE-01)
+//   - rate-limited     : 同じ from→to に 24h 以内のナッジが既にある (F-NUDGE-02)
+export type SendNudgeReason =
+  | "unauthenticated"
+  | "invalid-input"
+  | "not-member"
+  | "no-active-turn"
+  | "not-current-turn"
+  | "rate-limited";
+
+export class SendNudgeError extends Error {
+  readonly reason: SendNudgeReason;
+
+  constructor(reason: SendNudgeReason) {
+    super(reason);
+    this.name = "SendNudgeError";
+    this.reason = reason;
+  }
+}
