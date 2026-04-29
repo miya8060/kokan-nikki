@@ -95,13 +95,11 @@
   - 将来の scope creep (誰かが `updateEntry` / `deleteEntry` を生やす) を検知できない。
 - **次の一手**: `tests/integration/notebooks/edit-delete-absence.test.ts` を 1 本。`app/_actions/notebooks` が `updateEntry` / `deleteEntry` を export しないことを `Object.keys` で assert するだけの guard test で十分。
 
-### NF-SEC-01 — `AUTH_SECRET` が無いと起動失敗
+### ~~NF-SEC-01~~ — `AUTH_SECRET` が無いと起動失敗 (covered)
 
-- **実装**: Auth.js v5 がフレームワーク側で要求するため、未設定なら `NextAuth(config)` 評価時に throw する。
-- **テストの不足**:
-  - testing.md §5 の「結合 ○ AUTH_SECRET 未設定で起動失敗」がまだ encode されていない。
-  - 環境変数の読み込み順 (例えば `.env.local` のミス) を踏んだときに気付ける装置が無い。
-- **次の一手**: `tests/integration/auth/secret-required.test.ts` を 1 本。`process.env.AUTH_SECRET` を delete してから `await import("@/lib/auth")` が reject することを確認する。`tests/integration/auth/_setup.ts` の secret 設定経路と分けて per-test reset する必要がある点に注意。
+- **実装**: `lib/auth.ts:12` で AUTH_SECRET 不在を fail-fast で reject する明示ガード。当初想定では「Auth.js v5 がフレームワーク側で `NextAuth(config)` 時点で throw する」だったが、実際の `next-auth@5.0.0-beta.31` は assertConfig をリクエスト時まで遅延しており import は通ってしまう。Vercel 側 env 漏れを最初の magic-link 要求まで気付けない事故を避けるため、モジュール読込時に落とす形に揃えた。
+- **テスト**: `tests/integration/auth/secret-required.test.ts` で AUTH_SECRET=空 → import reject / 値あり → import 成功 の 2 ケースを encode 済。`vi.stubEnv` 経由で env を pin しているのは vite が dynamic import の解決パスで `.env` 由来の値を `process.env` に再注入するため (literal な `delete` だと復活する) — 経緯はテストコメントに残してある。
+- **次の一手**: 不要。
 
 ### F-AUTH-04 — 同じメールアドレスのアカウントは 1 つに統合される
 
@@ -163,13 +161,14 @@
 
 ---
 
-## Recommended Next Up (優先度トップ 2)
+## Recommended Next Up (優先度トップ 1)
 
-1. **NF-SEC-01 の secret 起動失敗テストを encode**  
-   `tests/integration/auth/secret-required.test.ts`。`AUTH_SECRET` を抜いた状態で `lib/auth` の動的 import が reject することを assert。env 漏れを CI で検知する装置になる。
-2. **F-EDIT-03 のエンドポイント不在ガード**  
+1. **F-EDIT-03 のエンドポイント不在ガード**  
    `tests/integration/notebooks/edit-delete-absence.test.ts`。`Object.keys` ベースの 1 ケースで足り、将来 scope creep で `updateEntry` / `deleteEntry` が増えたら CI で気付ける。
 
-2 件とも 1 ファイル追加で完結する小粒な手当てで、冒頭に並べた順で着手すれば 1 日 1 PR ペースで消化できる粒度。
+1 ファイル追加で完結する小粒な手当て。
 
-> 完了済: NF-A11Y-01 reduce-motion の自動 E2E (`tests/e2e/reduce-motion.spec.ts`)。
+> 完了済:
+>
+> - NF-A11Y-01 reduce-motion の自動 E2E (`tests/e2e/reduce-motion.spec.ts`)
+> - NF-SEC-01 AUTH_SECRET 必須ガード (`lib/auth.ts:12` + `tests/integration/auth/secret-required.test.ts`)
