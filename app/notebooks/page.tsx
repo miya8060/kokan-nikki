@@ -75,13 +75,20 @@ export default async function NotebooksPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
-      <header className="text-center">
+      <header className="relative text-center">
         <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl">
           ♡ にっき いちらん
         </h1>
         <p className="text-ink-soft mt-2 text-sm">
           {items.length} さつ の こうかんにっき
         </p>
+        <Link
+          href="/settings"
+          data-testid="nav-settings"
+          className="text-ink-soft hover:text-pink-2 absolute top-0 right-0 text-xs underline-offset-4 hover:underline"
+        >
+          ⚙ せってい
+        </Link>
       </header>
 
       <Sticker tape className="p-8">

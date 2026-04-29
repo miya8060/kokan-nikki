@@ -5,6 +5,16 @@ import {
   Mochiy_Pop_One,
   Zen_Maru_Gothic,
 } from "next/font/google";
+import { cookies } from "next/headers";
+
+import { HeartCursor } from "@/components/ui/HeartCursor";
+import { cn } from "@/lib/cn";
+import {
+  CURSOR_COOKIE,
+  PALETTE_COOKIE,
+  parseCursorEnabled,
+  parsePalette,
+} from "@/lib/palette";
 import "./globals.css";
 
 const mochi = Mochiy_Pop_One({
@@ -41,17 +51,36 @@ export const metadata: Metadata = {
     "Y2K カワイイ系のオンライン交換日記。順番にひとつのノートを回す体験を、離れた場所にいる相手と。",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // F-SET-01 / F-SET-02: cookie を SSR で読み <html> に反映。クライアント側で
+  // クラスを付け替える方式だと FOUC が出るのでサーバー側で確定させる。
+  const cookieStore = await cookies();
+  const palette = parsePalette(cookieStore.get(PALETTE_COOKIE)?.value);
+  const cursorEnabled = parseCursorEnabled(
+    cookieStore.get(CURSOR_COOKIE)?.value,
+  );
+
   return (
     <html
       lang="ja"
-      className={`${mochi.variable} ${maru.variable} ${pixel.variable} ${hand.variable} h-full antialiased`}
+      data-palette={palette}
+      className={cn(
+        mochi.variable,
+        maru.variable,
+        pixel.variable,
+        hand.variable,
+        "h-full antialiased",
+        cursorEnabled && "heart-cursor-on",
+      )}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        {cursorEnabled ? <HeartCursor /> : null}
+      </body>
     </html>
   );
 }

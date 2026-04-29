@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { FloatingCutie } from "@/components/ui/FloatingCutie";
-import { HeartCursor } from "@/components/ui/HeartCursor";
 import { Marquee } from "@/components/ui/Marquee";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sparkle } from "@/components/ui/Sparkle";
@@ -17,8 +16,6 @@ export default async function Home() {
 
   return (
     <>
-      <HeartCursor />
-
       <Marquee
         items={[
           <span

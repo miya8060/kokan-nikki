@@ -3,7 +3,9 @@
 /* ─────────────────────────────────────────────
  *  Dreamy Pixel design tokens
  *  Source: design_handoff_dreamy_pixel/index.html
- *  Palette swaps mutate these on <html> via cookie
+ *  Palette swaps mutate the --accent-* slots on <html data-palette="…">.
+ *  The named tokens (--pink, --mint, …) stay constant so existing components
+ *  keep working; new accent surfaces should reference --accent-a/b/c.
  * ───────────────────────────────────────────── */
 :root {
   --bg-1: #ffe8f1;
@@ -21,6 +23,34 @@
   --ink: #4b2c5e;
   --ink-soft: #7a5a8e;
   --paper: #fffcf4;
+
+  /* Palette accent slots (mint defaults). lib/palette.ts is the source of truth
+   * for the values; keep PALETTE_LABELS in sync if these change. */
+  --accent-a: #5cd6a8;
+  --accent-b: #ff8fbf;
+  --accent-c: #ffd56b;
+  --accent-a-soft: #b8f0c8;
+}
+
+[data-palette="strawberry"] {
+  --accent-a: #ff8fbf;
+  --accent-b: #ffd56b;
+  --accent-c: #b59cff;
+  --accent-a-soft: #ffd6ec;
+}
+
+[data-palette="lavender"] {
+  --accent-a: #b59cff;
+  --accent-b: #9dead0;
+  --accent-c: #ffd6ec;
+  --accent-a-soft: #e0d6ff;
+}
+
+[data-palette="cream"] {
+  --accent-a: #ffd56b;
+  --accent-b: #ffb1c8;
+  --accent-c: #a8d8ff;
+  --accent-a-soft: #fff2b8;
 }
 
 /* Expose design tokens to Tailwind v4 utilities (bg-pink, text-ink, etc.).
@@ -39,6 +69,10 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-paper: var(--paper);
+  --color-accent-a: var(--accent-a);
+  --color-accent-b: var(--accent-b);
+  --color-accent-c: var(--accent-c);
+  --color-accent-a-soft: var(--accent-a-soft);
 
   --font-mochi: var(--font-mochi);
   --font-maru: var(--font-maru);
@@ -66,10 +100,24 @@ body {
 
 body {
   overflow-x: clip;
+  /* Background blends fixed pastel paper with the active palette's accent
+   * slots so a cookie-driven palette swap is visible site-wide. */
   background:
-    radial-gradient(1200px 700px at 10% -10%, #ffd6ec 0%, transparent 60%),
-    radial-gradient(1100px 700px at 110% 20%, #b8f0c8 0%, transparent 60%),
-    radial-gradient(900px 700px at 50% 110%, #fff2b8 0%, transparent 60%),
+    radial-gradient(
+      1200px 700px at 10% -10%,
+      color-mix(in oklab, var(--accent-b) 55%, white) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      1100px 700px at 110% 20%,
+      color-mix(in oklab, var(--accent-a) 45%, white) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 700px at 50% 110%,
+      color-mix(in oklab, var(--accent-c) 55%, white) 0%,
+      transparent 60%
+    ),
     linear-gradient(180deg, #ffeef6 0%, #eef9f3 100%);
 }
 
