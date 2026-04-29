@@ -44,3 +44,7 @@ next-env.d.ts
 # local dev scratch (e.g. session-injection scripts)
 scripts/.dev-*
 .playwright-mcp/
+
+# Claude Code local state (per-user / per-process)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
