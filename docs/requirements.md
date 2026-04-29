@@ -125,7 +125,7 @@
 
 ### 4.4 アクセシビリティ
 
-- **NF-A11Y-01** `prefers-reduced-motion: reduce` の環境では、ランディングセクションのアニメーションを停止する。ボタンのフォーカスリングや保存中スピナーなど、機能的フィードバックの transition は維持する
+- **NF-A11Y-01** `<html class="reduce-motion">` が付与されたときに装飾アニメ (`.marquee` / `.sparkle` / `.cutie-float`) を停止する。ボタンのフォーカスリングや保存中スピナーなど機能的フィードバックの transition は維持する。MVP では OS の `prefers-reduced-motion: reduce` との連動は行わず、明示クラス指定のみをスコープとする (将来再導入予定)
 - **NF-A11Y-02** 装飾用 SVG には `aria-hidden="true"` を付与
 - **NF-A11Y-03** カスタムカーソルは設定で無効化可能
 

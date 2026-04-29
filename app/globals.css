@@ -375,16 +375,13 @@ body::before {
 }
 
 /* ─────────────────────────────────────────────
- *  Accessibility — prefers-reduced-motion
- *  Only decorative looping animations are killed.
- *  Functional transitions (focus rings, hover lift,
- *  button press feedback) intentionally survive
- *  per testing.md §6.4 + NF-A11Y-01.
+ *  Accessibility — opt-in reduce-motion (NF-A11Y-01)
+ *  MVP は OS の `prefers-reduced-motion` には連動させず、
+ *  明示的に `<html class="reduce-motion">` を付けた時のみ
+ *  装飾アニメを停止する (将来 setting / OS 連動を再導入予定)。
  * ───────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .marquee,
-  .sparkle,
-  .cutie-float {
-    animation: none !important;
-  }
+.reduce-motion .marquee,
+.reduce-motion .sparkle,
+.reduce-motion .cutie-float {
+  animation: none !important;
 }
