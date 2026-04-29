@@ -45,8 +45,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local dev scratch (e.g. session-injection scripts)
-scripts/.dev-*
+# local dev scratch: per-user seeders, session-injection scripts, ad-hoc tools.
+# Shared automation lives elsewhere (package.json scripts, .github/workflows).
+/scripts/
 .playwright-mcp/
 
 # Claude Code local state (per-user / per-process)
