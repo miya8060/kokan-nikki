@@ -14,7 +14,9 @@
   --bg-4: #d4f1ff;
 
   --pink: #ff8fbf;
-  --pink-2: #ff5ea8;
+  /* --pink-2 is darkened from the prototype #ff5ea8 to clear WCAG AA 4.5:1
+   * on the paper background. Decorative pink accents still use --pink. */
+  --pink-2: #cc2f80;
   --lav: #b59cff;
   --lemon: #ffd56b;
   --mint: #5cd6a8;
@@ -324,13 +326,15 @@ body::before {
 
 /* ─────────────────────────────────────────────
  *  Accessibility — prefers-reduced-motion
- *  Scoped to landing sections only so functional
- *  transitions (focus rings, save spinners) survive.
- *  See requirements NF-A11Y-01 + testing.md §6.4.
+ *  Only decorative looping animations are killed.
+ *  Functional transitions (focus rings, hover lift,
+ *  button press feedback) intentionally survive
+ *  per testing.md §6.4 + NF-A11Y-01.
  * ───────────────────────────────────────────── */
-.reduce-motion .landing-section *,
-.reduce-motion .landing-section *::before,
-.reduce-motion .landing-section *::after {
-  animation: none !important;
-  transition: none !important;
+@media (prefers-reduced-motion: reduce) {
+  .marquee,
+  .sparkle,
+  .cutie-float {
+    animation: none !important;
+  }
 }

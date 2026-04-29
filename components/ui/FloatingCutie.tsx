@@ -50,7 +50,7 @@ export function FloatingCutie({
     ["--r" as string]: `${rotate}deg`,
   };
   return (
-    <div aria-hidden style={style}>
+    <div aria-hidden className="cutie-float" style={style}>
       <Icon color={color} />
     </div>
   );
