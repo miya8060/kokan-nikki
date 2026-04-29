@@ -87,13 +87,11 @@
 - **テスト**: `tests/e2e/reduce-motion.spec.ts` で testing.md §6.4 の検証 1〜3 (装飾 OFF / 装飾 ON / `.btn-puff` の transition 生存) を自動化済。`*{animation:none}` の過剰適用バグは transition 検査で検知される。
 - **次の一手**: 不要。OS 連動 (`prefers-reduced-motion`) を将来再導入する際は `page.emulateMedia({ reducedMotion: 'reduce' })` ケースを足す。
 
-### F-EDIT-03 — エントリの編集・削除が無いこと
+### ~~F-EDIT-03~~ — エントリの編集・削除が無いこと (covered)
 
-- **実装**: 該当エンドポイント / Server Action が存在しないことで担保されている (構造的)。
-- **テストの不足**:
-  - testing.md §5 で「結合 ◎ 編集・削除エンドポイント不在の確認」と明記されているが、該当テストは未配。
-  - 将来の scope creep (誰かが `updateEntry` / `deleteEntry` を生やす) を検知できない。
-- **次の一手**: `tests/integration/notebooks/edit-delete-absence.test.ts` を 1 本。`app/_actions/notebooks` が `updateEntry` / `deleteEntry` を export しないことを `Object.keys` で assert するだけの guard test で十分。
+- **実装**: 該当エンドポイント / Server Action が存在しないことで担保 (構造的)。`app/_actions/notebooks.ts` の export は `createNotebook` / `createNotebookFromForm` / `postEntry` / `postEntryFromForm` の 4 本のみ。
+- **テスト**: `tests/integration/notebooks/edit-delete-absence.test.ts` で `app/_actions/notebooks` の export を `Object.keys` で見て、`updateEntry` / `deleteEntry` が含まれないことを assert。失敗時メッセージで「意図的な scope 変更なら docs/requirements.md (F-EDIT-03) と docs/remaining-features.md を先に更新してから guard を外せ」と運用導線を埋め込み済。`@/lib/auth` の AUTH_SECRET fail-fast (NF-SEC-01) を踏まないよう、`tests/helpers/session` の `vi.mock` を副作用 import で先に評価させる順序が必要だった経緯はテスト先頭コメントに残してある。
+- **次の一手**: 不要。
 
 ### ~~NF-SEC-01~~ — `AUTH_SECRET` が無いと起動失敗 (covered)
 
@@ -163,12 +161,13 @@
 
 ## Recommended Next Up (優先度トップ 1)
 
-1. **F-EDIT-03 のエンドポイント不在ガード**  
-   `tests/integration/notebooks/edit-delete-absence.test.ts`。`Object.keys` ベースの 1 ケースで足り、将来 scope creep で `updateEntry` / `deleteEntry` が増えたら CI で気付ける。
+1. **F-AUTH-04 の email merge end-to-end テスト**  
+   `tests/integration/auth/identity-merge.test.ts`。同じ email で `signin` を 2 回流して `prisma.user.count({ where: { email } }) === 1` を assert。実装側は `prisma/schema.prisma:21` の `email @unique` + Auth.js の PrismaAdapter で既に担保されているが、ID を名指しで踏むテストが無いので「email normalize の改修などで unique 制約が外れたら気付けない」状態。
 
-1 ファイル追加で完結する小粒な手当て。
+残る「テスト不足」候補 (F-NB-04 結合 / NF-DEV-01) はいずれも緊急度が低く、e2e でカバー済 / `docs/testing.md` §10 で MVP scope 外と明記されている領域なので順位を上げない。
 
 > 完了済:
 >
 > - NF-A11Y-01 reduce-motion の自動 E2E (`tests/e2e/reduce-motion.spec.ts`)
 > - NF-SEC-01 AUTH_SECRET 必須ガード (`lib/auth.ts:12` + `tests/integration/auth/secret-required.test.ts`)
+> - F-EDIT-03 編集・削除エンドポイント不在ガード (`tests/integration/notebooks/edit-delete-absence.test.ts`)
