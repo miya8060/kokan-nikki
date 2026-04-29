@@ -48,3 +48,6 @@ scripts/.dev-*
 # Claude Code local state (per-user / per-process)
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# dev mailbox: lib/mailer.ts writes here when RESEND_API_KEY is empty
+/tmp/
