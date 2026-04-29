@@ -28,6 +28,16 @@ export default defineConfig({
           // Container holds shared state; serialize until per-worker schema
           // is wired (testing.md §4.2 follow-up).
           fileParallelism: false,
+          server: {
+            deps: {
+              // next-auth ships an ESM bundle that imports "next/server"
+              // without a file extension; Node's resolver doesn't follow
+              // Next's package.json#exports through nested deps, so vitest
+              // raises ERR_MODULE_NOT_FOUND. Inlining lets Vite resolve the
+              // sub-path export the way the Next.js runtime does.
+              inline: ["next-auth", "@auth/core"],
+            },
+          },
         },
       },
     ],
