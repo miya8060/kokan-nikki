@@ -305,6 +305,56 @@ body::before {
     border-radius: 999px;
     box-shadow: 0 4px 0 var(--ink);
   }
+
+  /* Bootloader: each log line slides in with a stagger via inline --d. */
+  .boot-line {
+    opacity: 0;
+    transform: translateX(-6px);
+    animation: boot-fade-in 0.35s ease-out var(--d, 0s) forwards;
+  }
+  .boot-cursor {
+    display: inline-block;
+    animation: blink 0.8s step-end infinite;
+    animation-delay: 1.4s;
+  }
+  .boot-scanlines {
+    background: repeating-linear-gradient(
+      transparent 0,
+      transparent 2px,
+      rgba(255, 255, 255, 0.04) 2px,
+      rgba(255, 255, 255, 0.04) 3px
+    );
+  }
+
+  /* Typewriter: clip-path reveals text left-to-right. Independent of font width
+   * (works for proportional Mochiy / Maru), unlike the classic ch-based width
+   * trick. Steps gives the chunky typewriter feel. Caret blinks via shared
+   * @keyframes blink, delayed until typing finishes. */
+  .typewriter {
+    display: inline-block;
+    clip-path: inset(0 100% 0 0);
+    animation: typing-reveal var(--dur, 2s) steps(20) var(--delay, 0s)
+      forwards;
+  }
+  .typewriter-caret::after {
+    content: "_";
+    margin-left: 2px;
+    animation: blink 0.8s step-end infinite;
+    animation-delay: calc(var(--delay, 0s) + var(--dur, 2s));
+  }
+}
+
+@keyframes boot-fade-in {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes typing-reveal {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 
 /* ─────────────────────────────────────────────
@@ -336,5 +386,24 @@ body::before {
   .sparkle,
   .cutie-float {
     animation: none !important;
+  }
+  /* Decorative animation inside any landing section freezes (NF-A11Y-01).
+   * Functional `transition` on buttons (focus rings, hover lift, press feedback)
+   * is intentionally untouched — see testing.md §6.4. */
+  .landing-section,
+  .landing-section *,
+  .landing-section *::before,
+  .landing-section *::after {
+    animation: none !important;
+  }
+  /* Boot/Typewriter use opacity/clip-path as their initial keyframe state.
+   * Killing the animation alone would leave them invisible — restore the
+   * visible end-state explicitly. */
+  .landing-section .boot-line {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .landing-section .typewriter {
+    clip-path: none !important;
   }
 }
