@@ -1,0 +1,117 @@
+name: PR
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:unit
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Testcontainers spins Postgres on the runner's Docker daemon —
+      # no `services:` block needed (testing.md §9).
+      - run: pnpm test:int --coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-coverage
+          path: coverage/
+          retention-days: 7
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # tests/e2e/global-setup.ts handles Postgres + migrate + build +
+      # next start + readiness polling itself; no extra env wiring here.
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # Threshold enforcement happens inside `integration` via vitest.config.ts
+  # (`coverage.thresholds`) — a breach makes vitest exit non-zero, which is
+  # the real gate. This job exposes the coverage artifact in PR checks and
+  # gives branch protection a stable `cov-gate` check name (testing.md §9).
+  cov-gate:
+    needs: integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: integration-coverage
+          path: coverage
+      - name: Summarize coverage
+        run: |
+          {
+            echo "## Integration coverage"
+            echo ""
+            if [ -f coverage/cobertura-coverage.xml ]; then
+              echo "- Cobertura report uploaded as artifact \`integration-coverage\`."
+              echo "- Threshold enforcement runs inside the \`integration\` job (vitest.config.ts)."
+            else
+              echo "::error::Coverage report not found in artifact"
+              exit 1
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
