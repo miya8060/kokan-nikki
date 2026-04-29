@@ -37,6 +37,7 @@
 | F-AUTH-01  | `lib/auth.ts:14`, `app/auth/signin/page.tsx:34`, `app/_actions/auth.ts:12`                                   | `tests/integration/auth/sign-in.test.ts:35`, `tests/integration/auth/actions-smoke.test.ts:29`                        | 不要     |
 | F-AUTH-02  | `lib/auth.ts:13` (Resend provider のみ)                                                                      | `tests/integration/auth/sign-in.test.ts` (パスワード経路が無いことが構造で担保)                                       | 不要     |
 | F-AUTH-03  | `lib/auth.ts:10` (`session: { strategy: "database" }`)                                                       | `tests/integration/auth/callback.test.ts:47` (Session 行が DB に作られる / token 再利用不可)                          | 不要     |
+| F-AUTH-04  | `prisma/schema.prisma:21` (`email @unique`) + Auth.js PrismaAdapter                                          | `tests/integration/auth/identity-merge.test.ts` (同じ email で 2 回 signin → User 1 行 / Session 2 行)                | 不要     |
 | F-NB-01    | `app/_actions/notebooks.ts:24`, `lib/schemas/notebook.ts:9`                                                  | `tests/integration/notebooks/create-notebook.test.ts:20`, `lib/schemas/notebook.test.ts`                              | 不要     |
 | F-NB-03    | `app/_actions/notebooks.ts:42` (作成者を `orderIndex=0` で nested write)                                     | `tests/integration/notebooks/create-notebook.test.ts:20`                                                              | 不要     |
 | F-NB-04    | `app/notebooks/page.tsx:32` (memberships 一覧 + 次のターン解決)                                              | `tests/e2e/notebook-flow.spec.ts:43`                                                                                  | 不要     |
@@ -99,13 +100,11 @@
 - **テスト**: `tests/integration/auth/secret-required.test.ts` で AUTH_SECRET=空 → import reject / 値あり → import 成功 の 2 ケースを encode 済。`vi.stubEnv` 経由で env を pin しているのは vite が dynamic import の解決パスで `.env` 由来の値を `process.env` に再注入するため (literal な `delete` だと復活する) — 経緯はテストコメントに残してある。
 - **次の一手**: 不要。
 
-### F-AUTH-04 — 同じメールアドレスのアカウントは 1 つに統合される
+### ~~F-AUTH-04~~ — 同じメールアドレスのアカウントは 1 つに統合される (covered)
 
 - **実装**: `prisma/schema.prisma:21` の `email String @unique` + Auth.js の PrismaAdapter による upsert で担保。
-- **テストの不足**:
-  - 同じ email で 2 回 magic link → 1 つの User に集約される、という end-to-end の挙動は明示的に検証されていない。
-  - `tests/integration/auth/sign-in.test.ts:88` (email normalize) は近いが、F-AUTH-04 そのものを ID 名指しで踏むケースは無い。
-- **次の一手**: `tests/integration/auth/identity-merge.test.ts` を追加。同じ email で `signin` を 2 回流して、`prisma.user.count({ where: { email } }) === 1` を assert する。
+- **テスト**: `tests/integration/auth/identity-merge.test.ts` で同じ email を `signin` POST → callback GET で 2 回流し、`prisma.user.count({ where: { email } }) === 1` と userId 同一を assert。Session は別端末ログインに相当するので 2 行に増える挙動も明示してある。`useVerificationToken` を直叩きせず magic-link の 2 ハーフを通すことで、PrismaAdapter の `getUserByEmail` / `createUser` 経路が実際に email で集約していることを担保する設計。
+- **次の一手**: 不要。
 
 ### F-NB-04 (UI 層) — ノート一覧の SSR レンダリング
 
@@ -159,15 +158,16 @@
 
 ---
 
-## Recommended Next Up (優先度トップ 1)
+## Recommended Next Up
 
-1. **F-AUTH-04 の email merge end-to-end テスト**  
-   `tests/integration/auth/identity-merge.test.ts`。同じ email で `signin` を 2 回流して `prisma.user.count({ where: { email } }) === 1` を assert。実装側は `prisma/schema.prisma:21` の `email @unique` + Auth.js の PrismaAdapter で既に担保されているが、ID を名指しで踏むテストが無いので「email normalize の改修などで unique 制約が外れたら気付けない」状態。
+testing.md §5 が要求するレイヤをすべて満たしており、緊急度の高い「テスト不足」候補は残っていない。残るのは下記いずれも「緊急度が低い」「`docs/testing.md` §10 で MVP scope 外と明記」の領域なので積極的には積まない。
 
-残る「テスト不足」候補 (F-NB-04 結合 / NF-DEV-01) はいずれも緊急度が低く、e2e でカバー済 / `docs/testing.md` §10 で MVP scope 外と明記されている領域なので順位を上げない。
+- **F-NB-04 (UI 層) の結合テスト** — e2e でカバー済。結合に下ろすかは起動コスト次第。
+- **NF-DEV-01 流体タイポの viewport テスト** — testing.md §10 で MVP 対象外と整合済。
 
 > 完了済:
 >
 > - NF-A11Y-01 reduce-motion の自動 E2E (`tests/e2e/reduce-motion.spec.ts`)
 > - NF-SEC-01 AUTH_SECRET 必須ガード (`lib/auth.ts:12` + `tests/integration/auth/secret-required.test.ts`)
 > - F-EDIT-03 編集・削除エンドポイント不在ガード (`tests/integration/notebooks/edit-delete-absence.test.ts`)
+> - F-AUTH-04 email merge end-to-end (`tests/integration/auth/identity-merge.test.ts`)
