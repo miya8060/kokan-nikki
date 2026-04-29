@@ -157,7 +157,7 @@ kokan-nikki の事業価値の中核は、「ターン制」「招待の atomic 
 | NF-SEC-05      | ◎ nanoid(12) 長さ・文字種 | —                                    | —                         | —                       |
 | NF-CON-01      | —                         | ◎ F-INV-08 と併走                    | —                         | —                       |
 | NF-CON-02      | ◎ id タイブレーカー       | ○                                    | —                         | —                       |
-| NF-A11Y-01     | —                         | —                                    | △ クラス付与で停止確認    | ○                       |
+| NF-A11Y-01     | —                         | —                                    | ◎ クラス付与で停止確認    | ○                       |
 | NF-A11Y-02     | —                         | —                                    | ◎ axe で aria-hidden 検出 | ○                       |
 | NF-A11Y-03     | ◎ cookie ヘルパ           | —                                    | △                         | ○                       |
 | NF-DEV-01〜02  | —                         | —                                    | △ Chromium のみ           | ○ 他ブラウザは MCP 手動 |
@@ -212,7 +212,8 @@ const [a, b] = await Promise.allSettled([
 - 検証 1: `.reduce-motion` クラス付与時、`.marquee` / `.sparkle` / `.cutie-float` の `getComputedStyle().animationName === 'none'` であること
 - 検証 2: 同条件下でも、ボタンの focus ring 等の機能 transition は **生きていること**（`*{animation:none}` の過剰適用バグの再発防止）
 - 検証 3: クラス未付与時は装飾アニメが流れていること（OS の reduce-motion 設定とは独立）
-- 自動 E2E は MVP 対象外。将来 OS 連動を再導入する際に `page.emulateMedia({ reducedMotion: 'reduce' })` ベースの自動検証を追加する
+- 自動 E2E: `tests/e2e/reduce-motion.spec.ts`。`/` ランディング上で `.marquee` / `.sparkle` / `.cutie-float` と `.btn-puff` の computed style を読み、検証 1〜3 を踏む
+- 将来 OS 連動を再導入する際は、上記に加え `page.emulateMedia({ reducedMotion: 'reduce' })` ベースのケースを追加する
 
 ---
 

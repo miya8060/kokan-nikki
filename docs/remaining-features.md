@@ -81,14 +81,11 @@
 実装は出来ているが、testing.md §5 が要求するレイヤのテストが手付かず or 薄い ID。
 リグレッション検知の欠落点なので、優先的に手当てする価値が高い。
 
-### NF-A11Y-01 — `reduce-motion` クラスでの装飾アニメ停止
+### ~~NF-A11Y-01~~ — `reduce-motion` クラスでの装飾アニメ停止 (covered)
 
 - **実装**: `app/globals.css:383` で `.marquee` / `.sparkle` / `.cutie-float` を `animation: none !important` に。
-- **テストの不足**:
-  - testing.md §6.4 の検証 1〜3 (装飾 ON、装飾 OFF、機能 transition は生きる) いずれも自動化されていない。
-  - testing.md §5 では「△ クラス付与で停止確認」と E2E 軽カバーの位置づけだが、`tests/e2e/` に該当 spec は無い。
-  - `*{animation:none}` の過剰適用バグの再発防止は明示的にテストが要る。
-- **次の一手**: `tests/e2e/reduce-motion.spec.ts` を 1 本追加。`<html>` にクラスを付ける fixture 経由で、(a) 装飾の `getComputedStyle().animationName === 'none'` (b) ボタンの focus transition が残っている、を assert する。
+- **テスト**: `tests/e2e/reduce-motion.spec.ts` で testing.md §6.4 の検証 1〜3 (装飾 OFF / 装飾 ON / `.btn-puff` の transition 生存) を自動化済。`*{animation:none}` の過剰適用バグは transition 検査で検知される。
+- **次の一手**: 不要。OS 連動 (`prefers-reduced-motion`) を将来再導入する際は `page.emulateMedia({ reducedMotion: 'reduce' })` ケースを足す。
 
 ### F-EDIT-03 — エントリの編集・削除が無いこと
 
@@ -166,13 +163,13 @@
 
 ---
 
-## Recommended Next Up (優先度トップ 3)
+## Recommended Next Up (優先度トップ 2)
 
-1. **NF-A11Y-01 reduce-motion の自動テストを 1 本追加**  
-   `tests/e2e/reduce-motion.spec.ts`。testing.md §6.4 の 3 条件 (装飾停止 / 装飾流れる / 機能 transition は生存) を踏む。`*{animation:none}` 過剰適用の再発防止に直接効くので投資対効果が高い。
-2. **NF-SEC-01 の secret 起動失敗テストを encode**  
+1. **NF-SEC-01 の secret 起動失敗テストを encode**  
    `tests/integration/auth/secret-required.test.ts`。`AUTH_SECRET` を抜いた状態で `lib/auth` の動的 import が reject することを assert。env 漏れを CI で検知する装置になる。
-3. **F-EDIT-03 のエンドポイント不在ガード**  
+2. **F-EDIT-03 のエンドポイント不在ガード**  
    `tests/integration/notebooks/edit-delete-absence.test.ts`。`Object.keys` ベースの 1 ケースで足り、将来 scope creep で `updateEntry` / `deleteEntry` が増えたら CI で気付ける。
 
-3 件とも 1 ファイル追加で完結する小粒な手当てで、冒頭に並べた順で着手すれば 1 日 1 PR ペースで消化できる粒度。
+2 件とも 1 ファイル追加で完結する小粒な手当てで、冒頭に並べた順で着手すれば 1 日 1 PR ペースで消化できる粒度。
+
+> 完了済: NF-A11Y-01 reduce-motion の自動 E2E (`tests/e2e/reduce-motion.spec.ts`)。
