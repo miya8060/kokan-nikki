@@ -105,14 +105,13 @@ kokan-nikki の事業価値の中核は、「ターン制」「招待の atomic 
 - **起動**: `playwright.config.ts` の `webServer` で `pnpm build && pnpm start`、Postgres は別 Testcontainers セッションで立てて環境変数注入
 - **ログイン**: `tests/e2e/helpers/auth.ts` が User と Session を作成し、`context.addCookies()` で `authjs.session-token` を注入してから navigate（マジックリンクは結合で別途検証するので E2E では迂回）
 - **Resend**: `vi.mock` ではなく **MSW を Node 側で立てる**。`https://api.resend.com/emails` を 200 で握り、`tests/e2e/helpers/resend-mock.ts` から呼び出し履歴を取得可能に
-- **シナリオ（最小 4 本）**:
+- **シナリオ（最小 3 本）**:
 
-| ID     | 名前                                                                                                                   | 対応要件                                   |
-| ------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| e2e-01 | UC-01 抜粋: ノート作成 → 招待発行 → 受諾 → A 投稿 → B 投稿 → ターンが回る                                              | F-NB-01〜04 / F-INV-01〜06 / F-TURN-01〜04 |
-| e2e-02 | UC-02 抜粋: ナッジを押す → 24h 内の再送が UI で disabled                                                               | F-NUDGE-01〜03                             |
-| e2e-03 | ターンガード: B のターン中に A が `/notebooks/[id]/write` 直アクセス → notFound or redirect                            | F-TURN-05 / NF-SEC-04                      |
-| e2e-04 | ランディング & a11y: 9 セクションが mount + axe 違反 0 + `prefers-reduced-motion: reduce` でランディングのみアニメ停止 | F-LP-01〜03 / NF-A11Y-01                   |
+| ID     | 名前                                                                                        | 対応要件                                   |
+| ------ | ------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| e2e-01 | UC-01 抜粋: ノート作成 → 招待発行 → 受諾 → A 投稿 → B 投稿 → ターンが回る                   | F-NB-01〜04 / F-INV-01〜06 / F-TURN-01〜04 |
+| e2e-02 | UC-02 抜粋: ナッジを押す → 24h 内の再送が UI で disabled                                    | F-NUDGE-01〜03                             |
+| e2e-03 | ターンガード: B のターン中に A が `/notebooks/[id]/write` 直アクセス → notFound or redirect | F-TURN-05 / NF-SEC-04                      |
 
 - 各シナリオは独立した DB スキーマ（per-worker DB）で並列実行可能にする
 
@@ -148,7 +147,7 @@ kokan-nikki の事業価値の中核は、「ターン制」「招待の atomic 
 | F-EDIT-03      | —                         | ◎ 編集・削除エンドポイント不在の確認 | —                         | —                       |
 | F-NUDGE-01〜03 | —                         | ◎ 24h クールダウン                   | ○                         | ○                       |
 | F-NUDGE-04     | —                         | ◎ Cron + Resend モック               | —                         | △ Cron 手動 curl        |
-| F-LP-01〜04    | —                         | —                                    | ○ mount 確認              | ◎ 演出は MCP 目視       |
+| F-LP-01〜04    | ◎ redirect 分岐           | —                                    | —                         | ◎ 演出は MCP 目視       |
 | F-SET-01〜02   | ◎ cookie ヘルパ           | ○                                    | △                         | ○                       |
 | NF-PERF-01〜02 | —                         | —                                    | △ 計測のみ・ゲートなし    | ○                       |
 | NF-SEC-01      | —                         | ○ AUTH_SECRET 未設定で起動失敗       | —                         | —                       |
@@ -158,7 +157,7 @@ kokan-nikki の事業価値の中核は、「ターン制」「招待の atomic 
 | NF-SEC-05      | ◎ nanoid(12) 長さ・文字種 | —                                    | —                         | —                       |
 | NF-CON-01      | —                         | ◎ F-INV-08 と併走                    | —                         | —                       |
 | NF-CON-02      | ◎ id タイブレーカー       | ○                                    | —                         | —                       |
-| NF-A11Y-01     | —                         | —                                    | ◎ emulateMedia + axe      | ○                       |
+| NF-A11Y-01     | —                         | —                                    | △ クラス付与で停止確認    | ○                       |
 | NF-A11Y-02     | —                         | —                                    | ◎ axe で aria-hidden 検出 | ○                       |
 | NF-A11Y-03     | ◎ cookie ヘルパ           | —                                    | △                         | ○                       |
 | NF-DEV-01〜02  | —                         | —                                    | △ Chromium のみ           | ○ 他ブラウザは MCP 手動 |
@@ -207,12 +206,13 @@ const [a, b] = await Promise.allSettled([
 - DB クエリを含むので 2〜5 は結合に置く
 - 純粋計算部分（`pickNextOrderIndex(members: Member[], latestAuthorId: string|null)`）を切り出して単体でテストする
 
-### 6.4 NF-A11Y-01 prefers-reduced-motion
+### 6.4 NF-A11Y-01 reduce-motion クラス
 
-- Playwright の `page.emulateMedia({ reducedMotion: 'reduce' })` を `beforeEach` で設定
-- 検証 1: ランディング配下の `.landing-section *` が `getComputedStyle().animationName === 'none'` であること
-- 検証 2: ボタンの focus ring 等の機能 transition は **生きていること**（`*{animation:none}` の過剰適用バグの再発防止）
-- スコープを `.reduce-motion .landing-section *` に限定する CSS 設計を前提とする
+- MVP は OS の `prefers-reduced-motion` には連動させず、`<html class="reduce-motion">` を明示付与した時のみ装飾アニメを停止する
+- 検証 1: `.reduce-motion` クラス付与時、`.marquee` / `.sparkle` / `.cutie-float` の `getComputedStyle().animationName === 'none'` であること
+- 検証 2: 同条件下でも、ボタンの focus ring 等の機能 transition は **生きていること**（`*{animation:none}` の過剰適用バグの再発防止）
+- 検証 3: クラス未付与時は装飾アニメが流れていること（OS の reduce-motion 設定とは独立）
+- 自動 E2E は MVP 対象外。将来 OS 連動を再導入する際に `page.emulateMedia({ reducedMotion: 'reduce' })` ベースの自動検証を追加する
 
 ---
 
