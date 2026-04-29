@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local dev scratch (e.g. session-injection scripts)
+scripts/.dev-*
+.playwright-mcp/
