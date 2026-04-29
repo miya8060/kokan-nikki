@@ -1,3 +1,11 @@
+// `app/_actions/notebooks` は `@/lib/auth` を間接 import する。`@/lib/auth` は
+// NF-SEC-01 で AUTH_SECRET 不在を fail-fast で reject するため、mock 無しで
+// import すると CI 環境 (AUTH_SECRET 未設定) で SuiteFail になる。
+// `tests/helpers/session` は module load 時に `vi.mock("@/lib/auth")` を
+// 登録する副作用を持つので、他のどの import より先に評価させて guard を
+// 無害化する。本テストは auth() を呼ばないので setMockSession 等は不要。
+import "@/tests/helpers/session";
+
 import { describe, expect, it } from "vitest";
 
 import * as notebooksActions from "@/app/_actions/notebooks";
