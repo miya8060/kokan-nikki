@@ -337,4 +337,13 @@ body::before {
   .cutie-float {
     animation: none !important;
   }
+  /* Decorative animation inside any landing section freezes (NF-A11Y-01).
+   * Functional `transition` on buttons (focus rings, hover lift, press feedback)
+   * is intentionally untouched — see testing.md §6.4. */
+  .landing-section,
+  .landing-section *,
+  .landing-section *::before,
+  .landing-section *::after {
+    animation: none !important;
+  }
 }
