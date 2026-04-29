@@ -5,7 +5,7 @@
 | プロジェクト名 | kokan-nikki（こうかんにっき） |
 | 種別           | 交換日記 Web アプリケーション |
 | バージョン     | 0.1（MVP 要件）               |
-| 最終更新       | 2026-04-29                    |
+| 最終更新       | 2026-04-30                    |
 | ステータス     | 確定（実装着手前）            |
 
 ---
@@ -246,9 +246,30 @@
 
 ---
 
-## 10. 関連ドキュメント
+## 10. MVP 運用解釈（要件文と実装の温度差）
+
+要件文と現実装の間に「意図的な温度差」がある ID を 1 箇所に集約する。詳細な実装/テスト棚卸しは `docs/remaining-features.md` を一次ソースとし、この節は「なぜ要件文どおり厳格化していないか」の判断ログとして残す。
+
+| 要件 ID           | 要件文                     | MVP での運用解釈                                                                                                                                                                                                                                                                                                          |
+| ----------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F-NB-02（下限 2） | メンバー数 2〜6 人         | 上限 6 は `lib/invites.ts:28` の `NOTEBOOK_MAX_MEMBERS` が `acceptInvite` 内で in-tx に hard reject。**下限 2 は作成直後の単独状態（=1 人）を許容する**。下限を満たすのは「招待を発行 → 受諾後の最終状態」の話で、サーバー側 hard-reject は MVP では入れない（ノート作成 → 即座に招待発行できないと UX が破綻するため）。 |
+| NF-PERF-01        | 初回ペイント 2 秒以内      | **計測のみ・ゲートなし**。MVP 出荷後に Lighthouse 手動 + Vercel Analytics dashboard を 1 度目視する運用（`docs/testing.md` §10 と整合）。継続計測の自動ゲートは置かない。                                                                                                                                                 |
+| NF-PERF-02        | エントリ取得 200ms 以内    | 同上。`(notebookId, createdAt)` インデックス + `id DESC` タイブレーカー（`prisma/schema.prisma:108`, `lib/notebooks.ts:58`）で構造的に担保するに留め、自動ゲートは置かない。                                                                                                                                              |
+| NF-DEV-02         | モダンブラウザ最新 2〜3 種 | 自動 E2E は **Chromium 1 種**。Firefox / WebKit は MVP では Playwright MCP 手動でカバー（`docs/testing.md` §5, §10）。                                                                                                                                                                                                    |
+| F-EDIT-03         | 編集・削除は MVP 対象外    | 要件文どおり該当 Server Action を持たない。`tests/integration/notebooks/edit-delete-absence.test.ts` で `app/_actions/notebooks` の export 集合に `updateEntry` / `deleteEntry` が含まれないことを構造的に assert する。                                                                                                  |
+
+> v1.0 以降で再評価する候補:
+>
+> - F-NB-02 下限 2 を厳格化するなら、サーバー側 hard-reject ではなく「招待発行への強い導線」など UX 側で手当てする方が安全
+> - NF-PERF-01,02 を CI ゲート化するなら、Lighthouse CI / Vercel Analytics SLI を別途配線
+> - NF-DEV-02 の自動カバレッジ拡張は `playwright.config.ts` に Firefox / WebKit projects を足すだけだが、CI 時間との trade-off
+
+---
+
+## 11. 関連ドキュメント
 
 - 実装プラン: `~/.claude/plans/users-yuki-downloads-design-handoff-dre-vivid-matsumoto.md`
 - テスト戦略: `docs/testing.md`
+- 実装/テスト棚卸し: `docs/remaining-features.md`
 - デザインハンドオフ: `/Users/yuki/Downloads/design_handoff_dreamy_pixel 2/`
 - Prisma スキーマ（実装後）: `prisma/schema.prisma`
