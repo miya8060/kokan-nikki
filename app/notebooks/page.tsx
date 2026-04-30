@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createNotebookFromForm } from "@/app/_actions/notebooks";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NOTEBOOK_NAME_MAX } from "@/lib/schemas/notebook";
@@ -61,7 +62,7 @@ export default async function NotebooksPage() {
       const nextTurnUser = nextTurnUserId
         ? await prisma.user.findUnique({
             where: { id: nextTurnUserId },
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true, email: true, image: true },
           })
         : null;
       return {
@@ -71,6 +72,7 @@ export default async function NotebooksPage() {
         nextTurnLabel: nextTurnUser
           ? (nextTurnUser.name ?? nextTurnUser.email)
           : "—",
+        nextTurnImageUrl: nextTurnUser?.image ?? null,
         isYourTurn: nextTurnUserId === userId,
       };
     }),
@@ -148,8 +150,16 @@ export default async function NotebooksPage() {
                     <dd>
                       {item.isYourTurn ? (
                         <strong className="text-pink-2">あなた ♡</strong>
+                      ) : item.nextTurnLabel === "—" ? (
+                        "—"
                       ) : (
-                        item.nextTurnLabel
+                        <span className="inline-flex items-center gap-1.5 align-middle">
+                          <UserAvatar
+                            imageValue={item.nextTurnImageUrl}
+                            displayName={item.nextTurnLabel}
+                          />
+                          <span>{item.nextTurnLabel}</span>
+                        </span>
                       )}
                     </dd>
                   </dl>

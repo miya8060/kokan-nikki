@@ -8,6 +8,9 @@ export type NotebookDetailMember = {
   userId: string;
   orderIndex: number;
   displayName: string;
+  // F-USER-02: User.image の生値 (null か "preset:KEY")。コンポーネント側で
+  // UserAvatar が解釈する。URL アップロード対応時もこの型で吸収できる。
+  imageUrl: string | null;
 };
 
 export type NotebookDetailEntry = {
@@ -16,6 +19,7 @@ export type NotebookDetailEntry = {
   createdAt: Date;
   authorId: string;
   authorDisplayName: string;
+  authorImageUrl: string | null;
 };
 
 export type NotebookDetail = {
@@ -25,6 +29,7 @@ export type NotebookDetail = {
   entries: NotebookDetailEntry[];
   nextTurnUserId: string | null;
   nextTurnDisplayName: string | null;
+  nextTurnImageUrl: string | null;
   isViewerMember: true;
   isYourTurn: boolean;
   // F-NUDGE-02 のレートリミットを UI が予測表示するための値。viewer から
@@ -50,7 +55,7 @@ export async function getNotebookDetail(
         select: {
           userId: true,
           orderIndex: true,
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, email: true, image: true } },
         },
       },
       entries: {
@@ -61,7 +66,7 @@ export async function getNotebookDetail(
           body: true,
           createdAt: true,
           authorId: true,
-          author: { select: { name: true, email: true } },
+          author: { select: { name: true, email: true, image: true } },
         },
       },
     },
@@ -75,6 +80,7 @@ export async function getNotebookDetail(
     userId: m.userId,
     orderIndex: m.orderIndex,
     displayName: displayNameOf(m.user),
+    imageUrl: m.user.image,
   }));
   const entries: NotebookDetailEntry[] = notebook.entries.map((e) => ({
     id: e.id,
@@ -82,6 +88,7 @@ export async function getNotebookDetail(
     createdAt: e.createdAt,
     authorId: e.authorId,
     authorDisplayName: displayNameOf(e.author),
+    authorImageUrl: e.author.image,
   }));
 
   // entries は新しい順なので [0] が最新。pickNextOrderIndex に渡せばよい。
@@ -116,6 +123,7 @@ export async function getNotebookDetail(
     entries,
     nextTurnUserId: nextMember?.userId ?? null,
     nextTurnDisplayName: nextMember?.displayName ?? null,
+    nextTurnImageUrl: nextMember?.imageUrl ?? null,
     isViewerMember: true,
     isYourTurn: nextMember?.userId === viewerUserId,
     viewerLastNudgeAt,
