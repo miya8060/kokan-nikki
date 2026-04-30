@@ -48,6 +48,9 @@ export default async function globalSetup() {
 
   const databaseUrl = container.getConnectionUri();
   process.env.DATABASE_URL = databaseUrl;
+  // schema.prisma の directUrl が要求する変数。ローカル PG に pooler は無いので
+  // pooled / unpooled で同じ値を流す。
+  process.env.DATABASE_URL_UNPOOLED = databaseUrl;
   process.env.AUTH_SECRET =
     process.env.AUTH_SECRET ?? "e2e-test-secret-do-not-use-in-prod=";
   process.env.AUTH_URL = E2E_BASE_URL;
@@ -58,7 +61,11 @@ export default async function globalSetup() {
 
   console.log("[e2e] running prisma migrate deploy");
   execSync("pnpm prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+      DATABASE_URL_UNPOOLED: databaseUrl,
+    },
     stdio: "inherit",
   });
 
@@ -67,6 +74,7 @@ export default async function globalSetup() {
   const childEnv = {
     ...process.env,
     DATABASE_URL: databaseUrl,
+    DATABASE_URL_UNPOOLED: databaseUrl,
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_URL: E2E_BASE_URL,
     AUTH_TRUST_HOST: "true",

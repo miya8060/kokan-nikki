@@ -19,8 +19,15 @@ export default async function setup(project: TestProject) {
   const databaseUrl = container.getConnectionUri();
   project.provide("DATABASE_URL", databaseUrl);
 
+  // schema.prisma の directUrl が DATABASE_URL_UNPOOLED を要求するので
+  // testcontainer URL を両方に注入する (ローカル PG には pooler が無いため
+  // pooled / unpooled で同じ値で良い)。
   execSync("pnpm prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+      DATABASE_URL_UNPOOLED: databaseUrl,
+    },
     stdio: "inherit",
   });
 
