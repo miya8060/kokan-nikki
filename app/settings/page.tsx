@@ -2,11 +2,19 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { setDisplayName } from "@/app/_actions/profile";
+import { setDisplayName, setIcon } from "@/app/_actions/profile";
 import { setCursor, setPalette } from "@/app/_actions/settings";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { auth } from "@/lib/auth";
+import {
+  ICON_PRESET_KEYS,
+  ICON_PRESET_LABELS,
+  parsePresetKey,
+  serializePreset,
+  type IconPresetKey,
+} from "@/lib/icons/presets";
 import {
   CURSOR_COOKIE,
   PALETTE_COOKIE,
@@ -38,6 +46,8 @@ export default async function SettingsPage() {
   const cursorEnabled = parseCursorEnabled(
     cookieStore.get(CURSOR_COOKIE)?.value,
   );
+  const currentIconKey = parsePresetKey(session.user.image ?? null);
+  const displayName = session.user.name;
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
@@ -77,6 +87,57 @@ export default async function SettingsPage() {
           </label>
           <div className="flex justify-center">
             <PuffButton type="submit" data-testid="display-name-save">
+              ♡ ほぞん
+            </PuffButton>
+          </div>
+        </form>
+      </Sticker>
+
+      <Sticker tape className="p-8">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
+          ☆ アイコン
+        </h2>
+        <p className="text-ink-soft mt-1 text-xs">
+          メンバー欄や にっきの ヘッダーに でるよ
+        </p>
+        <div className="mt-4 flex items-center gap-3">
+          <UserAvatar
+            imageValue={session.user.image ?? null}
+            displayName={displayName}
+            size="md"
+          />
+          <span className="text-ink-soft text-xs">
+            いま:{" "}
+            <strong className="text-ink">
+              {currentIconKey
+                ? ICON_PRESET_LABELS[currentIconKey]
+                : "デフォルト"}
+            </strong>
+          </span>
+        </div>
+        <form
+          action={setIcon}
+          className="mt-5 flex flex-col gap-4"
+          data-testid="icon-form"
+        >
+          <fieldset className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+            <legend className="sr-only">アイコンを選ぶ</legend>
+            <IconOption
+              presetKey={null}
+              displayName={displayName}
+              checked={currentIconKey === null}
+            />
+            {ICON_PRESET_KEYS.map((key) => (
+              <IconOption
+                key={key}
+                presetKey={key}
+                displayName={displayName}
+                checked={key === currentIconKey}
+              />
+            ))}
+          </fieldset>
+          <div className="flex justify-center">
+            <PuffButton type="submit" data-testid="icon-save">
               ♡ ほぞん
             </PuffButton>
           </div>
@@ -135,11 +196,7 @@ export default async function SettingsPage() {
             </strong>
           </p>
           <div className="flex justify-center">
-            <PuffButton
-              type="submit"
-              variant="alt"
-              data-testid="cursor-toggle"
-            >
+            <PuffButton type="submit" variant="alt" data-testid="cursor-toggle">
               {cursorEnabled ? "★ OFF にする" : "★ ON にする"}
             </PuffButton>
           </div>
@@ -155,6 +212,41 @@ export default async function SettingsPage() {
         </Link>
       </p>
     </main>
+  );
+}
+
+function IconOption({
+  presetKey,
+  displayName,
+  checked,
+}: {
+  presetKey: IconPresetKey | null;
+  displayName: string;
+  checked: boolean;
+}) {
+  // value = "" がデフォルト (User.image を null に戻す) を表す。Server Action 側
+  // の iconFormValueSchema で union(literal(""), preset) として受け取る。
+  const value = presetKey === null ? "" : presetKey;
+  const label =
+    presetKey === null ? "デフォルト" : ICON_PRESET_LABELS[presetKey];
+  const imageValue = presetKey === null ? null : serializePreset(presetKey);
+  return (
+    <label
+      data-testid={`icon-option-${presetKey ?? "default"}`}
+      data-checked={checked || undefined}
+      className="border-ink flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 bg-white p-3 shadow-[0_3px_0_var(--ink)] transition has-checked:-translate-y-0.5 has-checked:shadow-[0_5px_0_var(--ink)]"
+    >
+      <input
+        type="radio"
+        name="icon"
+        value={value}
+        defaultChecked={checked}
+        className="sr-only"
+        required
+      />
+      <UserAvatar imageValue={imageValue} displayName={displayName} size="md" />
+      <span className="text-ink text-xs">{label}</span>
+    </label>
   );
 }
 

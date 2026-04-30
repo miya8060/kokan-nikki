@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 
 import { UpdateProfileError } from "@/app/_actions/errors";
 import { auth } from "@/lib/auth";
+import { serializePreset } from "@/lib/icons/presets";
 import { prisma } from "@/lib/prisma";
 import { isInternalCallbackUrl } from "@/lib/safe-redirect";
-import { displayNameSchema } from "@/lib/schemas/user";
+import { displayNameSchema, iconFormValueSchema } from "@/lib/schemas/user";
 
 // F-USER-01: 表示名 (User.name) を更新する Server Action。
 // onboarding (/onboarding/name) と /settings の両方から呼ばれる:
@@ -43,4 +44,34 @@ export async function setDisplayName(formData: FormData): Promise<void> {
   if (typeof callbackRaw === "string" && callbackRaw.length > 0) {
     redirect(isInternalCallbackUrl(callbackRaw) ? callbackRaw : "/notebooks");
   }
+}
+
+// F-USER-02: アイコン (User.image) を更新する Server Action。/settings からのみ
+// 呼ばれる (onboarding 必須ではない / 未設定はデフォルトアイコンで成立)。
+// 受理する値:
+//   - "" : デフォルトアイコンに戻す (User.image = null)
+//   - "heart" | "star" | "plus" | "dot" : preset:KEY を保存
+// SSR 側 (notebooks 一覧 / 詳細) で member.user.image を直接参照するため
+// revalidatePath は root layout で行う。
+export async function setIcon(formData: FormData): Promise<void> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    throw new UpdateProfileError("unauthenticated");
+  }
+
+  const raw = formData.get("icon");
+  const parsed = iconFormValueSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new UpdateProfileError("invalid-input");
+  }
+
+  const image = parsed.data === "" ? null : serializePreset(parsed.data);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { image },
+  });
+
+  revalidatePath("/", "layout");
 }

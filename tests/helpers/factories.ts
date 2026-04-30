@@ -1,5 +1,11 @@
 import { randomBytes } from "node:crypto";
-import type { PrismaClient, User, Notebook, Entry, Invite } from "@prisma/client";
+import type {
+  PrismaClient,
+  User,
+  Notebook,
+  Entry,
+  Invite,
+} from "@prisma/client";
 
 import { generateInviteCode } from "@/lib/invites";
 
@@ -11,17 +17,19 @@ const rand = () => randomBytes(6).toString("hex");
 
 export async function makeUser(
   prisma: PrismaClient,
-  overrides: Partial<Pick<User, "email" | "name">> = {},
+  overrides: Partial<Pick<User, "email" | "name" | "image">> = {},
 ): Promise<User> {
   // F-USER-01: 表示名 (User.name) が空のユーザーは onboarding に強制 redirect
   // されるため、テストの既定は「onboarding 済み」のユーザーにしておく。
   // 旧データ移行の挙動 (name = null のフォールバックなど) を確かめたいテストは
   // overrides.name に null を明示的に渡す。
+  // F-USER-02: image (アイコン) は既定 null = デフォルトアイコン。preset を
+  // 検証するテストでは overrides.image に "preset:KEY" を渡す。
   return prisma.user.create({
     data: {
       email: overrides.email ?? `${rand()}@test.local`,
-      name:
-        "name" in overrides ? (overrides.name ?? null) : `user-${rand()}`,
+      name: "name" in overrides ? (overrides.name ?? null) : `user-${rand()}`,
+      image: "image" in overrides ? (overrides.image ?? null) : null,
       emailVerified: new Date(),
     },
   });

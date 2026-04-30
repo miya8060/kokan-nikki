@@ -14,7 +14,7 @@ vi.mock("next/cache", () => ({
 }));
 
 import { UpdateProfileError } from "@/app/_actions/errors";
-import { setDisplayName } from "@/app/_actions/profile";
+import { setDisplayName, setIcon } from "@/app/_actions/profile";
 import { makeUser } from "@/tests/helpers/factories";
 import { getPrisma } from "@/tests/setup/db.per-test";
 
@@ -146,6 +146,82 @@ describe("setDisplayName (F-USER-01)", () => {
 
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated?.name).toBe("ひびき");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+});
+
+// F-USER-02: アイコン更新の Server Action。/settings からのみ呼ばれるため
+// callbackUrl 経路は持たず、常に revalidatePath のみ。
+describe("setIcon (F-USER-02)", () => {
+  it("未ログインなら UpdateProfileError('unauthenticated') を投げる", async () => {
+    const fd = new FormData();
+    fd.set("icon", "heart");
+
+    await expect(setIcon(fd)).rejects.toMatchObject({
+      name: "UpdateProfileError",
+      reason: "unauthenticated",
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("未知のキーは UpdateProfileError('invalid-input') を投げる", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma);
+    setMockSession(user);
+
+    const fd = new FormData();
+    fd.set("icon", "rocket");
+
+    await expect(setIcon(fd)).rejects.toMatchObject({
+      name: "UpdateProfileError",
+      reason: "invalid-input",
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+
+    const reread = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(reread?.image).toBeNull();
+  });
+
+  it('保存形式 ("preset:heart") をフォーム値として受けても弾く (form schema は raw キーのみ)', async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma);
+    setMockSession(user);
+
+    const fd = new FormData();
+    fd.set("icon", "preset:heart");
+
+    await expect(setIcon(fd)).rejects.toMatchObject({
+      reason: "invalid-input",
+    });
+  });
+
+  it("プリセット選択は preset:KEY として保存される", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma);
+    setMockSession(user);
+
+    const fd = new FormData();
+    fd.set("icon", "heart");
+
+    await setIcon(fd);
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(updated?.image).toBe("preset:heart");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it('"" を送ると User.image を null に戻す (デフォルトアイコン)', async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma, { image: "preset:star" });
+    setMockSession(user);
+
+    const fd = new FormData();
+    fd.set("icon", "");
+
+    await setIcon(fd);
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(updated?.image).toBeNull();
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 });

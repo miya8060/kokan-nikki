@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { sendNudgeFromForm } from "@/app/_actions/nudges";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { auth } from "@/lib/auth";
 import { getNotebookDetail } from "@/lib/notebooks";
 import { NUDGE_RATE_LIMIT_MS } from "@/lib/nudges";
@@ -61,12 +62,32 @@ export default async function NotebookDetailPage({
           <dd>
             {detail.isYourTurn ? (
               <strong className="text-pink-2">あなた ♡</strong>
+            ) : detail.nextTurnDisplayName ? (
+              <span className="inline-flex items-center gap-2 align-middle">
+                <UserAvatar
+                  imageValue={detail.nextTurnImageUrl}
+                  displayName={detail.nextTurnDisplayName}
+                />
+                <span>{detail.nextTurnDisplayName}</span>
+              </span>
             ) : (
-              (detail.nextTurnDisplayName ?? "—")
+              "—"
             )}
           </dd>
           <dt>メンバー</dt>
-          <dd>{detail.members.map((m) => m.displayName).join(" / ")}</dd>
+          <dd>
+            <ul className="flex flex-wrap gap-x-3 gap-y-1">
+              {detail.members.map((m) => (
+                <li key={m.userId} className="inline-flex items-center gap-1.5">
+                  <UserAvatar
+                    imageValue={m.imageUrl}
+                    displayName={m.displayName}
+                  />
+                  <span>{m.displayName}</span>
+                </li>
+              ))}
+            </ul>
+          </dd>
         </dl>
         {detail.isYourTurn ? (
           <div className="flex justify-center pt-4">
@@ -130,8 +151,12 @@ export default async function NotebookDetailPage({
             {detail.entries.map((entry) => (
               <li key={entry.id}>
                 <Sticker className="p-6">
-                  <header className="text-ink-soft flex flex-wrap items-baseline justify-between gap-2 text-xs">
-                    <span className="text-ink font-[family-name:var(--font-mochi)] text-base">
+                  <header className="text-ink-soft flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-ink inline-flex items-center gap-2 font-[family-name:var(--font-mochi)] text-base">
+                      <UserAvatar
+                        imageValue={entry.authorImageUrl}
+                        displayName={entry.authorDisplayName}
+                      />
                       {entry.authorDisplayName}
                     </span>
                     <time dateTime={entry.createdAt.toISOString()}>
@@ -179,8 +204,7 @@ function NudgeBlock({
     <div className="mt-4 flex flex-col items-center gap-2">
       <p className="text-ink-soft text-center text-xs">
         つぎの ばんは{" "}
-        <strong className="text-ink">{nextTurnDisplayName ?? "—"}</strong>{" "}
-        だよ
+        <strong className="text-ink">{nextTurnDisplayName ?? "—"}</strong> だよ
       </p>
       <form action={submitAction}>
         <PuffButton type="submit" variant="alt" disabled={rateLimited}>
