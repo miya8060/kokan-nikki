@@ -25,6 +25,9 @@ export default async function NotebookWritePage({
   if (!userId) {
     redirect(`/auth/signin?callbackUrl=/notebooks/${id}/write`);
   }
+  if (!session.user?.name || session.user.name.trim().length === 0) {
+    redirect(`/onboarding/name?callbackUrl=/notebooks/${id}/write`);
+  }
 
   const detail = await getNotebookDetail(id, userId);
   if (!detail) notFound();

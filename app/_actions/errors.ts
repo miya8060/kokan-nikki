@@ -84,6 +84,18 @@ export class SettingsError extends Error {
   }
 }
 
+export type UpdateProfileReason = "unauthenticated" | "invalid-input";
+
+export class UpdateProfileError extends Error {
+  readonly reason: UpdateProfileReason;
+
+  constructor(reason: UpdateProfileReason) {
+    super(reason);
+    this.name = "UpdateProfileError";
+    this.reason = reason;
+  }
+}
+
 // F-NUDGE-01〜03 のサーバー側挙動を表現する。受信者は「現ターンの人」
 // 一意に決まるためサーバー側で導出する設計にしており、UI からは toUserId を
 // 受け取らない。そのため「自己宛」「ターン者以外宛」のエラーは発生しない。

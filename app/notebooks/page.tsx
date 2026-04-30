@@ -28,6 +28,9 @@ export default async function NotebooksPage() {
   if (!userId) {
     redirect("/auth/signin?callbackUrl=/notebooks");
   }
+  if (!session.user?.name || session.user.name.trim().length === 0) {
+    redirect("/onboarding/name?callbackUrl=/notebooks");
+  }
 
   const memberships = await prisma.notebookMember.findMany({
     where: { userId },

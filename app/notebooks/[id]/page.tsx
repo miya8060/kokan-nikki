@@ -35,6 +35,9 @@ export default async function NotebookDetailPage({
   if (!userId) {
     redirect(`/auth/signin?callbackUrl=/notebooks/${id}`);
   }
+  if (!session.user?.name || session.user.name.trim().length === 0) {
+    redirect(`/onboarding/name?callbackUrl=/notebooks/${id}`);
+  }
 
   // 非メンバー / 存在しないノートはどちらも notFound。NF-SEC-04 の観点で
   // 「このノートはあるが入れない」を漏らさないため。
