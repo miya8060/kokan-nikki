@@ -2,27 +2,27 @@
 
 Y2K カワイイ系の世界観で作るオンライン交換日記。ペアまたは小グループ (最大 6 人) で 1 冊のノートを順番に回す体験を再現する。
 
-| 項目     | 内容                                                |
-| -------- | --------------------------------------------------- |
-| バージョン | 0.1（MVP 開発中）                                   |
-| 要件     | [`docs/requirements.md`](docs/requirements.md)      |
-| テスト戦略 | [`docs/testing.md`](docs/testing.md)                |
+| 項目             | 内容                                                |
+| ---------------- | --------------------------------------------------- |
+| バージョン       | 0.1（MVP 開発中）                                   |
+| 要件             | [`docs/requirements.md`](docs/requirements.md)      |
+| テスト戦略       | [`docs/testing.md`](docs/testing.md)                |
 | エージェント向け | [`AGENTS.md`](AGENTS.md) (= `CLAUDE.md` で取り込み) |
 
 ---
 
 ## 技術スタック
 
-| レイヤ        | 採用                                                                |
-| ------------- | ------------------------------------------------------------------- |
-| フレームワーク | Next.js 16 (App Router) / React 19                                  |
-| 認証          | Auth.js v5 (Resend Email Provider) + DB セッション                  |
-| DB / ORM      | Postgres 16 / Prisma 6                                              |
-| バリデーション | zod 4                                                               |
-| スタイル      | Tailwind CSS v4 + デザインハンドオフ "Dreamy Pixel"                |
-| メール        | Resend                                                              |
-| テスト        | Vitest 4 + `@testcontainers/postgresql` (結合) / Playwright (E2E 予定) |
-| デプロイ      | Vercel + Neon (本番) / Docker Compose (ローカル)                    |
+| レイヤ         | 採用                                                                   |
+| -------------- | ---------------------------------------------------------------------- |
+| フレームワーク | Next.js 16 (App Router) / React 19                                     |
+| 認証           | Auth.js v5 (Resend Email Provider) + DB セッション                     |
+| DB / ORM       | Postgres 16 / Prisma 6                                                 |
+| バリデーション | zod 4                                                                  |
+| スタイル       | Tailwind CSS v4 + デザインハンドオフ "Dreamy Pixel"                    |
+| メール         | Resend                                                                 |
+| テスト         | Vitest 4 + `@testcontainers/postgresql` (結合) / Playwright (E2E 予定) |
+| デプロイ       | Vercel + Neon (本番) / Docker Compose (ローカル)                       |
 
 > Next.js 16 / React 19 は API・規約・ファイル構成が訓練データの想定から外れている可能性が高い。実装に着手する前に `node_modules/next/dist/docs/` の該当章を **必ず** 一次ソースとして参照する。詳細は [`AGENTS.md`](AGENTS.md)。
 
@@ -83,21 +83,21 @@ tests/                結合テスト + ヘルパ + DB セットアップ
 
 ## コマンド早見
 
-| 用途           | コマンド                              |
-| -------------- | ------------------------------------- |
-| 開発サーバ     | `pnpm dev`                            |
-| 本番ビルド     | `pnpm build` / `pnpm start`           |
-| 型検査         | `pnpm typecheck`                      |
-| Lint           | `pnpm lint`                           |
-| フォーマット   | `pnpm format` / `pnpm format:check`   |
-| テスト全部     | `pnpm test`                           |
-| 単体のみ       | `pnpm test:unit`                      |
-| 結合のみ (要 Docker) | `pnpm test:int`                  |
-| カバレッジ     | `pnpm test:cov`                       |
-| DB 起動 / 停止 | `pnpm db:up` / `pnpm db:down`         |
-| DB 完全リセット | `pnpm db:reset`                       |
-| マイグレーション | `pnpm db:migrate`                     |
-| Prisma Studio | `pnpm db:studio`                      |
+| 用途                 | コマンド                            |
+| -------------------- | ----------------------------------- |
+| 開発サーバ           | `pnpm dev`                          |
+| 本番ビルド           | `pnpm build` / `pnpm start`         |
+| 型検査               | `pnpm typecheck`                    |
+| Lint                 | `pnpm lint`                         |
+| フォーマット         | `pnpm format` / `pnpm format:check` |
+| テスト全部           | `pnpm test`                         |
+| 単体のみ             | `pnpm test:unit`                    |
+| 結合のみ (要 Docker) | `pnpm test:int`                     |
+| カバレッジ           | `pnpm test:cov`                     |
+| DB 起動 / 停止       | `pnpm db:up` / `pnpm db:down`       |
+| DB 完全リセット      | `pnpm db:reset`                     |
+| マイグレーション     | `pnpm db:migrate`                   |
+| Prisma Studio        | `pnpm db:studio`                    |
 
 結合テストは Testcontainers が Docker daemon を要求する。テスト戦略の全体像は [`docs/testing.md`](docs/testing.md)。
 
@@ -123,5 +123,7 @@ git worktree add ../kokan-nikki-xxx -b feat/xxx main
 
 - 要件定義: [`docs/requirements.md`](docs/requirements.md)
 - テスト戦略: [`docs/testing.md`](docs/testing.md)
+- 実装/テスト棚卸し: [`docs/remaining-features.md`](docs/remaining-features.md)
+- リリース運用手順: [`docs/release-checklist.md`](docs/release-checklist.md)
 - エージェント運用ルール: [`AGENTS.md`](AGENTS.md)
 - デザインハンドオフ: "Dreamy Pixel" (パステル / Y2K カワイイ系。要件 §3.7 参照)
