@@ -17,6 +17,7 @@ import { sendMail } from "@/lib/mailer";
 import { getPrisma } from "@/tests/setup/db.per-test";
 import {
   buildSignInRequest,
+  decodeBase64UrlForTest,
   hashAuthToken,
   mintCsrfPair,
 } from "./_helpers";
@@ -47,12 +48,18 @@ describe("POST /api/auth/signin/resend (F-AUTH-01 / F-AUTH-02)", () => {
     expect(call.kind).toBe("verification");
     expect(call.subject).toContain("Sign in to");
 
-    // 本文に埋め込まれる callback URL から raw token を抜き出す。
-    const linkMatch = call.text.match(
-      /https?:\/\/[^\s]+\/api\/auth\/callback\/resend\?[^\s]+/,
+    // 本文に埋め込まれるのは /auth/confirm?to=<base64>(callback URL) で、
+    // 本物の callback URL は base64 経由で隠蔽される (NF-SEC: Gmail 等の
+    // scanner 対策)。テスト側は wrap を解いて raw token を取り出す。
+    const wrappedMatch = call.text.match(
+      /https?:\/\/[^\s]+\/auth\/confirm\?to=[A-Za-z0-9_-]+/,
     );
-    expect(linkMatch).not.toBeNull();
-    const url = new URL(linkMatch![0]);
+    expect(wrappedMatch).not.toBeNull();
+    const wrapped = new URL(wrappedMatch![0]);
+    const innerEncoded = wrapped.searchParams.get("to");
+    expect(innerEncoded).not.toBeNull();
+    const url = new URL(decodeBase64UrlForTest(innerEncoded!));
+    expect(url.pathname).toBe("/api/auth/callback/resend");
     const rawToken = url.searchParams.get("token");
     expect(rawToken).toMatch(/^[0-9a-f]{64}$/);
     expect(url.searchParams.get("email")).toBe("alice@test.local");

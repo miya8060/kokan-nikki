@@ -83,3 +83,13 @@ export function findSessionCookie(res: Response): string | undefined {
     c.startsWith("authjs.session-token="),
   );
 }
+
+// lib/safe-redirect.wrapCallbackUrl が base64url で詰めたものを元に戻す。
+// 本番コード側 (lib/safe-redirect) と同じロジックを再実装しているのは、
+// テスト側でデコードに失敗すると wrap/unwrap の対称性が壊れた事故を見逃せる
+// ため。プロダクション実装の bug を tests でも再現しないように 2 重実装。
+export function decodeBase64UrlForTest(input: string): string {
+  let b64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  return Buffer.from(b64, "base64").toString("utf-8");
+}
