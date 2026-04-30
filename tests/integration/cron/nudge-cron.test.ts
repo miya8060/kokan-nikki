@@ -206,6 +206,29 @@ describe("GET /api/cron/nudge (F-NUDGE-04 / NF-SEC-02)", () => {
       expect(sendMail).toHaveBeenCalledTimes(1);
     });
 
+    it("notebook 名に改行が混じっていても subject では空白に正規化される (NF-SEC defense in depth)", async () => {
+      const prisma = getPrisma();
+      const a = await makeUser(prisma);
+      const b = await makeUser(prisma);
+      // notebookNameSchema は改行を弾くので通常はここに来ないが、route 側にも
+      // hardening を入れている。Prisma 直叩きで改行入りの name を埋めて検証。
+      const nb = await makeNotebook(prisma, {
+        owner: a,
+        members: [b],
+        name: "stale\r\nlines",
+      });
+      await makeEntry(prisma, {
+        notebook: nb,
+        author: a,
+        createdAt: new Date(Date.now() - 80 * 60 * 60 * 1000),
+      });
+
+      await GET(makeReq(`Bearer ${TEST_SECRET}`));
+      const call = vi.mocked(sendMail).mock.calls[0][0];
+      expect(call.subject).not.toMatch(/[\r\n]/);
+      expect(call.subject).toContain("stale lines");
+    });
+
     it("name 未設定のユーザでも email が宛先・差し込みに使われる", async () => {
       const prisma = getPrisma();
       const a = await makeUser(prisma);

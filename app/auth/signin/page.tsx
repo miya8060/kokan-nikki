@@ -4,6 +4,7 @@ import { requestSignIn } from "@/app/_actions/auth";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { auth } from "@/lib/auth";
+import { pickInternalCallbackUrl } from "@/lib/safe-redirect";
 
 type SignInPageProps = {
   searchParams: Promise<{ callbackUrl?: string | string[] }>;
@@ -15,11 +16,10 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     redirect("/notebooks");
   }
 
+  // NF-SEC: //evil.example のような protocol-relative URL を弾く。
+  // 単純な startsWith("/") だと open redirect になる。
   const params = await searchParams;
-  const raw = params.callbackUrl;
-  const callbackUrl = Array.isArray(raw) ? raw[0] : raw;
-  const redirectTo =
-    callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/notebooks";
+  const redirectTo = pickInternalCallbackUrl(params.callbackUrl, "/notebooks");
 
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-24">

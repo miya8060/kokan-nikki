@@ -6,8 +6,12 @@ import { z } from "zod";
 export const NOTEBOOK_NAME_MIN = 1;
 export const NOTEBOOK_NAME_MAX = 80;
 
+// NF-SEC: notebook 名はナッジメールの subject に直接埋め込まれる
+// (app/api/cron/nudge/route.ts:54)。改行を許すと一部 mail client で
+// 表示崩れが起きるため、ここで弾いて DB に入る前に防ぐ。
 export const notebookNameSchema = z
   .string()
   .trim()
   .min(NOTEBOOK_NAME_MIN)
-  .max(NOTEBOOK_NAME_MAX);
+  .max(NOTEBOOK_NAME_MAX)
+  .regex(/^[^\r\n]+$/, "改行は使えません");

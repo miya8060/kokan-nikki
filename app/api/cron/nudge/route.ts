@@ -51,7 +51,11 @@ function buildNudgeEmail(args: {
   const link = base
     ? `${base}/notebooks/${args.notebookId}`
     : `/notebooks/${args.notebookId}`;
-  const subject = `「${args.notebookName}」のターンが まわってきたよ ♡`;
+  // NF-SEC defense in depth: notebook 名は notebookNameSchema で改行を弾いて
+  // いるが、DB に過去の値が残っていた場合に subject 表示崩れを起こさないため
+  // ここでも改行を空白に正規化する。
+  const safeName = args.notebookName.replace(/[\r\n]+/g, " ");
+  const subject = `「${safeName}」のターンが まわってきたよ ♡`;
   const text = [
     `${args.toName} さんへ`,
     "",

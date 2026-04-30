@@ -35,4 +35,12 @@ describe("notebookNameSchema (F-NB-01 境界値)", () => {
       expect(parsed.data).toBe("ひみつにっき");
     }
   });
+
+  // NF-SEC: 名前は cron のナッジメール subject に埋め込まれる経路がある。
+  // 改行を許すと mail subject の表示崩れの温床になるため schema 側で弾く。
+  it("改行を含む名前は拒否される", () => {
+    expect(notebookNameSchema.safeParse("foo\nbar").success).toBe(false);
+    expect(notebookNameSchema.safeParse("foo\r\nbar").success).toBe(false);
+    expect(notebookNameSchema.safeParse("foo\rbar").success).toBe(false);
+  });
 });
