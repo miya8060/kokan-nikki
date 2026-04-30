@@ -125,3 +125,51 @@ describe("NotebookDetailPage membership guard (NF-SEC-04)", () => {
     expect(isNotFound(caught)).toBe(true);
   });
 });
+
+describe("NotebookDetailPage onboarding gate (F-USER-01)", () => {
+  it("name 未設定のユーザーは /onboarding/name?callbackUrl=/notebooks/{id} へ redirect する", async () => {
+    const prisma = getPrisma();
+    const owner = await makeUser(prisma);
+    const member = await makeUser(prisma, { name: null });
+    const notebook = await makeNotebook(prisma, { owner, members: [member] });
+    setMockSession(member);
+
+    let caught: unknown;
+    try {
+      await NotebookDetailPage({
+        params: Promise.resolve({ id: notebook.id }),
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(isRedirect(caught)).toBe(true);
+    if (!isRedirect(caught)) return;
+    expect(redirectUrlFrom(caught)).toBe(
+      `/onboarding/name?callbackUrl=/notebooks/${notebook.id}`,
+    );
+  });
+
+  it("name が空白だけのユーザーも onboarding に redirect する", async () => {
+    const prisma = getPrisma();
+    const owner = await makeUser(prisma);
+    const member = await makeUser(prisma, { name: "   " });
+    const notebook = await makeNotebook(prisma, { owner, members: [member] });
+    setMockSession(member);
+
+    let caught: unknown;
+    try {
+      await NotebookDetailPage({
+        params: Promise.resolve({ id: notebook.id }),
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(isRedirect(caught)).toBe(true);
+    if (!isRedirect(caught)) return;
+    expect(redirectUrlFrom(caught)).toBe(
+      `/onboarding/name?callbackUrl=/notebooks/${notebook.id}`,
+    );
+  });
+});

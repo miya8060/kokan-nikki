@@ -38,6 +38,9 @@ export default async function NotebookInvitePage({
   if (!userId) {
     redirect(`/auth/signin?callbackUrl=/notebooks/${id}/invite`);
   }
+  if (!session.user?.name || session.user.name.trim().length === 0) {
+    redirect(`/onboarding/name?callbackUrl=/notebooks/${id}/invite`);
+  }
 
   // 詳細ページと同じ判定 (NF-SEC-04): 非メンバー / 存在しない id は notFound。
   const detail = await getNotebookDetail(id, userId);

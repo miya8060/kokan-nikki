@@ -84,6 +84,11 @@ export default async function InviteAcceptPage({
     // F-INV-05: サインイン後に同 URL へ戻して受諾フローを継続させる。
     redirect(`/auth/signin?callbackUrl=/invite/${code}`);
   }
+  if (!session.user?.name || session.user.name.trim().length === 0) {
+    // F-USER-01: 招待 URL 経由の初回ログインも、ペアにメアドが見えないよう
+    // 表示名を入れさせてから受諾フローに戻す。
+    redirect(`/onboarding/name?callbackUrl=/invite/${code}`);
+  }
 
   // ルートパラメータの形式チェック。zod 検証は acceptInvite 側にもあるが、
   // ここで弾いておけば DB を引かずに friendly エラーを出せる。

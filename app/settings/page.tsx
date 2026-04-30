@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { setDisplayName } from "@/app/_actions/profile";
 import { setCursor, setPalette } from "@/app/_actions/settings";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
@@ -15,15 +16,21 @@ import {
   parsePalette,
   type PaletteKey,
 } from "@/lib/palette";
+import { DISPLAY_NAME_MAX } from "@/lib/schemas/user";
 
 // F-SET-01 / F-SET-02 / NF-A11Y-03
 // 設定画面は cookie の現在値を SSR で読み、フォーム submit で Server Action に渡す。
 // MCP 用の data-testid は testing.md §4.4 の規約に揃える。
+// F-USER-01: 表示名 (User.name) もここから編集できる。初回設定は
+// /onboarding/name 経由なので、このページに辿り着いた時点で name は設定済み。
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) {
     redirect("/auth/signin?callbackUrl=/settings");
+  }
+  if (!session.user.name || session.user.name.trim().length === 0) {
+    redirect("/onboarding/name?callbackUrl=/settings");
   }
 
   const cookieStore = await cookies();
@@ -42,6 +49,39 @@ export default async function SettingsPage() {
           みための こうかん と カーソル を きりかえる ♡
         </p>
       </header>
+
+      <Sticker tape className="p-8">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
+          ☆ ひょうじめい
+        </h2>
+        <p className="text-ink-soft mt-1 text-xs">
+          メンバーに みえる おなまえ。さいだい {DISPLAY_NAME_MAX} もじ。
+        </p>
+        <form
+          action={setDisplayName}
+          className="mt-5 flex flex-col gap-4"
+          data-testid="display-name-form"
+        >
+          <label className="flex flex-col gap-2 text-left">
+            <span className="sr-only">ひょうじめい</span>
+            <input
+              type="text"
+              name="displayName"
+              required
+              maxLength={DISPLAY_NAME_MAX}
+              autoComplete="nickname"
+              defaultValue={session.user.name}
+              data-testid="display-name-input"
+              className="border-ink text-ink focus:ring-pink rounded-2xl border-2 bg-white px-4 py-3 text-base shadow-[0_3px_0_var(--ink)] outline-none focus:ring-2"
+            />
+          </label>
+          <div className="flex justify-center">
+            <PuffButton type="submit" data-testid="display-name-save">
+              ♡ ほぞん
+            </PuffButton>
+          </div>
+        </form>
+      </Sticker>
 
       <Sticker tape className="p-8">
         <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">

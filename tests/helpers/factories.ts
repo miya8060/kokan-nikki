@@ -13,10 +13,15 @@ export async function makeUser(
   prisma: PrismaClient,
   overrides: Partial<Pick<User, "email" | "name">> = {},
 ): Promise<User> {
+  // F-USER-01: 表示名 (User.name) が空のユーザーは onboarding に強制 redirect
+  // されるため、テストの既定は「onboarding 済み」のユーザーにしておく。
+  // 旧データ移行の挙動 (name = null のフォールバックなど) を確かめたいテストは
+  // overrides.name に null を明示的に渡す。
   return prisma.user.create({
     data: {
       email: overrides.email ?? `${rand()}@test.local`,
-      name: overrides.name ?? null,
+      name:
+        "name" in overrides ? (overrides.name ?? null) : `user-${rand()}`,
       emailVerified: new Date(),
     },
   });
