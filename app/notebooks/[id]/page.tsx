@@ -144,6 +144,15 @@ export default async function NotebookDetailPage({
           </ul>
         )}
       </section>
+
+      <p className="text-center">
+        <Link
+          href="/notebooks"
+          className="text-ink-soft hover:text-pink-2 text-sm underline-offset-4 hover:underline"
+        >
+          ← にっき いちらん へ もどる
+        </Link>
+      </p>
     </main>
   );
 }
