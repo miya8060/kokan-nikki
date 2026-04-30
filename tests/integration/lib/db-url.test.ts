@@ -8,6 +8,8 @@ import { resolveDatabaseUrl } from "@/lib/db-url";
 import {
   isInternalCallbackUrl,
   pickInternalCallbackUrl,
+  unwrapCallbackUrl,
+  wrapCallbackUrl,
 } from "@/lib/safe-redirect";
 
 describe("resolveDatabaseUrl (integration coverage hop)", () => {
@@ -61,5 +63,44 @@ describe("safe-redirect (integration coverage hop)", () => {
     expect(pickInternalCallbackUrl("/settings", "/fallback")).toBe("/settings");
     expect(pickInternalCallbackUrl("//evil", "/fallback")).toBe("/fallback");
     expect(pickInternalCallbackUrl(undefined, "/fallback")).toBe("/fallback");
+  });
+
+  it("wrapCallbackUrl は同一ホストの /auth/confirm に置換し to= に元 URL を base64url 埋め込み", () => {
+    const original =
+      "https://kokannikki.app/api/auth/callback/resend?token=abc123&email=alice@test.local";
+    const wrapped = wrapCallbackUrl(original);
+    const u = new URL(wrapped);
+    expect(u.host).toBe("kokannikki.app");
+    expect(u.pathname).toBe("/auth/confirm");
+    expect(u.searchParams.get("to")).not.toBeNull();
+
+    const back = unwrapCallbackUrl(u.searchParams.get("to"), "kokannikki.app");
+    expect(back).not.toBeNull();
+    const parsed = new URL(back!);
+    expect(parsed.pathname).toBe("/api/auth/callback/resend");
+    expect(parsed.searchParams.get("token")).toBe("abc123");
+    expect(parsed.searchParams.get("email")).toBe("alice@test.local");
+  });
+
+  it("unwrapCallbackUrl は host 不一致 / コールバック以外 / 不正 base64 / 空入力を全て null", () => {
+    const real =
+      "https://kokannikki.app/api/auth/callback/resend?token=t&email=a@b";
+    const realEncoded = new URL(wrapCallbackUrl(real)).searchParams.get("to")!;
+
+    // 配列で渡された場合は先頭要素を採用
+    expect(unwrapCallbackUrl([realEncoded], "kokannikki.app")).not.toBeNull();
+    // host 不一致
+    expect(unwrapCallbackUrl(realEncoded, "evil.example")).toBeNull();
+    // コールバック以外のパスを wrap した URL は unwrap 拒否
+    const notCallback = new URL(
+      wrapCallbackUrl("https://kokannikki.app/notebooks"),
+    ).searchParams.get("to")!;
+    expect(unwrapCallbackUrl(notCallback, "kokannikki.app")).toBeNull();
+    // base64 デコード後に URL として parse 不能 (new URL が throw)
+    // → "abc" は base64 として有効だが、デコード結果 "i\xb7" は URL ではない
+    expect(unwrapCallbackUrl("abc", "kokannikki.app")).toBeNull();
+    // 空入力 / undefined
+    expect(unwrapCallbackUrl("", "kokannikki.app")).toBeNull();
+    expect(unwrapCallbackUrl(undefined, "kokannikki.app")).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import Resend from "next-auth/providers/resend";
 
 import { sendMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
+import { wrapCallbackUrl } from "@/lib/safe-redirect";
 
 // NF-SEC-01: Auth.js v5 (5.0.0-beta.31) は AUTH_SECRET 不在でも
 // NextAuth(config) は throw せず、最初のリクエスト時に MissingSecret を返す
@@ -30,12 +31,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // lib/mailer.ts. In prod this still goes through Resend.
       async sendVerificationRequest({ identifier: to, url, provider }) {
         const { host } = new URL(url);
+        // NF-SEC: 本物の callback URL を /auth/confirm でラップして scanner
+        // (Gmail link preview 等) のプリフェッチで token が消費されるのを
+        // 防ぐ。ユーザーが confirmation page でボタンを 1 回クリックして
+        // 初めて本物の callback URL に遷移し、token が消費される。
+        const link = wrapCallbackUrl(url);
         await sendMail({
           to,
           from: provider.from ?? "kokan-nikki <noreply@example.invalid>",
           subject: `Sign in to ${host}`,
-          text: `${host} に サインイン するには、以下のリンクを ふんで ね ♡\n\n${url}\n\n10 ふんで きえるよ。`,
-          html: `<p>${host} に サインイン するには、以下のリンクを ふんで ね ♡</p><p><a href="${url}">${url}</a></p><p>10 ふんで きえるよ。</p>`,
+          text: `${host} に サインイン するには、以下のリンクを ふんで ね ♡\n\n${link}\n\n10 ふんで きえるよ。`,
+          html: `<p>${host} に サインイン するには、以下のリンクを ふんで ね ♡</p><p><a href="${link}">${link}</a></p><p>10 ふんで きえるよ。</p>`,
           kind: "verification",
         });
       },

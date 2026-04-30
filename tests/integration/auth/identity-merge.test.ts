@@ -14,6 +14,7 @@ import { getPrisma } from "@/tests/setup/db.per-test";
 import {
   buildCallbackRequest,
   buildSignInRequest,
+  decodeBase64UrlForTest,
   findSessionCookie,
   mintCsrfPair,
 } from "./_helpers";
@@ -48,11 +49,17 @@ async function magicLinkRoundtrip(rawEmail: string): Promise<string> {
   const calls = vi.mocked(sendMail).mock.calls;
   expect(calls.length).toBe(beforeCallCount + 1);
   const sent = calls[calls.length - 1][0];
-  const linkMatch = sent.text.match(
-    /https?:\/\/[^\s]+\/api\/auth\/callback\/resend\?[^\s]+/,
+  // 本文に埋め込まれるのは /auth/confirm?to=<base64>(callback URL) で、
+  // 本物の callback URL は base64 経由で隠蔽される (NF-SEC: Gmail 等の
+  // scanner 対策、lib/safe-redirect.wrapCallbackUrl)。ここでは wrap を解いて
+  // raw token / email を取り出す。
+  const wrappedMatch = sent.text.match(
+    /https?:\/\/[^\s]+\/auth\/confirm\?to=[A-Za-z0-9_-]+/,
   );
-  expect(linkMatch).not.toBeNull();
-  const url = new URL(linkMatch![0]);
+  expect(wrappedMatch).not.toBeNull();
+  const innerEncoded = new URL(wrappedMatch![0]).searchParams.get("to");
+  expect(innerEncoded).not.toBeNull();
+  const url = new URL(decodeBase64UrlForTest(innerEncoded!));
   const rawToken = url.searchParams.get("token");
   const sentEmail = url.searchParams.get("email");
   expect(rawToken).not.toBeNull();
