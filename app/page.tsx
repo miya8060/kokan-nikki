@@ -81,8 +81,9 @@ export default async function Home() {
           </div>
 
           <p className="text-ink-soft mt-6 text-sm leading-7">
-            UI プリミティブが揃った。次は Docker + Prisma で
-            データレイヤーを敷く。
+            きょうの きもちを、ともだちと そっと わけあう。
+            <br />
+            まずは おなまえを おしえてね ♡
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">
