@@ -73,7 +73,9 @@ DNS / 本番ドメイン ─────┘
 
 ## 5. Vercel 環境変数の設定
 
-すべて **Production** スコープに登録 (Preview / Development は別途要件に応じて)。
+§5.1 が **Production** スコープ、§5.2 が **Preview** スコープ。Development はローカル `.env.local` を使う前提で本書では扱わない。
+
+### 5.1 Production スコープ
 
 | 変数                    | 値                                                        | 必須     | 由来 / メモ                                                                                                     |
 | ----------------------- | --------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- |
@@ -91,6 +93,36 @@ DNS / 本番ドメイン ─────┘
 ```bash
 vercel env ls production
 ```
+
+### 5.2 Preview スコープ
+
+PR ごとの preview deploy で参照される。Production と **secret を必ず別値にして隔離** する。
+
+| 変数              | Preview 用の値                                                                | 由来 / メモ                                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `AUTH_SECRET`     | `openssl rand -base64 32` で **Production と別に新規生成**                    | Production と同値にすると preview 由来 cookie が prod で復号可能になり secret 隔離が崩れる                                                 |
+| `AUTH_TRUST_HOST` | `true`                                                                        | Preview URL も Vercel proxy 越しなので必須                                                                                                 |
+| `CRON_SECRET`     | 新規生成 (Production と別)                                                    | Vercel Cron は Production のみで走るので Preview で発火しないが、curl 手動検証時のリーク隔離のため別値で保持                              |
+| `EMAIL_FROM`      | Production と同じ (`kokan-nikki <noreply@mail.<本番ドメイン>>`)               | 検証済ドメインで同居して問題なし                                                                                                          |
+| `RESEND_API_KEY`  | **空文字を明示**                                                              | `lib/mailer.ts:36` で空文字なら `tmp/dev-mailbox/` 経路にフォールバックし、Preview から本番宛にメール送信されるリスクを完全に断つ          |
+
+**Preview スコープに入れない変数**:
+
+- `DATABASE_URL` — Vercel-Neon integration が PR ごとに Neon の Preview Branch を自動作成し `DATABASE_URL` 系を自動注入する。手動投入すると衝突する
+- `AUTH_URL` — Preview URL は `*.vercel.app` で動的。`AUTH_TRUST_HOST=true` で host header から推定させる
+- `NUDGE_THRESHOLD_HOURS` — 既定 72h で十分。Cron は Production のみで走るので Preview では未使用
+
+#### Neon Preview Branch の前提
+
+Vercel Marketplace 経由の Neon integration は **Preview Branch 自動作成がデフォルト有効** で、明示的な toggle UI は持たない。Preview スコープを開いたときに `DATABASE_URL` / `DATABASE_URL_UNPOOLED` 等が **integration 由来** で並んでいれば連携は機能している。
+
+#### Preview Branch と migration の取り扱い (MVP の割り切り)
+
+Preview Branch は Production branch の schema スナップショットで作られるため、**新規 migration を含む PR の Preview deploy は migration 未適用で起動 / クエリ時に error** になる。MVP では:
+
+- migration を含まない PR は Preview deploy が green で通る
+- migration を含む PR は Preview deploy が壊れる前提で扱い、deploy log で気付ければ良い (実害は preview のみ)
+- 将来恒常運用するなら `package.json` の `build` を `prisma migrate deploy && next build` に変えて全 environment 共通化 (idempotent なので Production でも no-op)
 
 ---
 
