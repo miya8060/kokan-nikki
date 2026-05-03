@@ -79,15 +79,19 @@ export function EntriesList({
             >
               <Sticker className="p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-ink inline-flex items-center gap-2 font-[family-name:var(--font-mochi)] text-base">
+                  <span className="text-ink inline-flex min-w-0 flex-1 items-center gap-2 font-[family-name:var(--font-mochi)] text-base">
                     <UserAvatar
                       imageValue={entry.authorImageUrl}
                       displayName={entry.authorDisplayName}
                     />
                     {isNew && (
-                      <span className="text-pink-2 text-xs">♪ NEW</span>
+                      <span className="text-pink-2 shrink-0 text-xs">
+                        ♪ NEW
+                      </span>
                     )}
-                    <span className="truncate">{display}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      {display}
+                    </span>
                   </span>
                   <time
                     dateTime={entry.createdAt.toISOString()}
