@@ -59,6 +59,7 @@ export async function makeEntry(
   args: {
     notebook: Notebook;
     author: User;
+    title?: string | null;
     body?: string;
     createdAt?: Date;
   },
@@ -67,6 +68,8 @@ export async function makeEntry(
     data: {
       notebookId: args.notebook.id,
       authorId: args.author.id,
+      // title は意図的に null も渡せる (本番既存 entry の fallback テスト用)。
+      ...("title" in args ? { title: args.title } : {}),
       body: args.body ?? `entry-${rand()}`,
       ...(args.createdAt && { createdAt: args.createdAt }),
     },

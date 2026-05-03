@@ -7,7 +7,7 @@ import { z } from "zod";
 import { CreateNotebookError, PostEntryError } from "@/app/_actions/errors";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { entryBodySchema } from "@/lib/schemas/entry";
+import { entryBodySchema, entryTitleSchema } from "@/lib/schemas/entry";
 import { notebookNameSchema } from "@/lib/schemas/notebook";
 import { isUsersTurn } from "@/lib/turn";
 
@@ -67,6 +67,7 @@ export async function createNotebookFromForm(
 
 const postEntryInputSchema = z.object({
   notebookId: z.string().min(1),
+  title: entryTitleSchema,
   body: entryBodySchema,
 });
 
@@ -85,7 +86,7 @@ export async function postEntry(
   if (!parsed.success) {
     throw new PostEntryError("invalid-input");
   }
-  const { notebookId, body } = parsed.data;
+  const { notebookId, title, body } = parsed.data;
 
   // NF-SEC-04: membership is verified server-side, independent of the UI's
   // turn check. Non-members must not even reach the turn predicate.
@@ -103,7 +104,7 @@ export async function postEntry(
   }
 
   const entry = await prisma.entry.create({
-    data: { notebookId, authorId: userId, body },
+    data: { notebookId, authorId: userId, title, body },
     select: { id: true },
   });
   return { entryId: entry.id };
@@ -118,10 +119,12 @@ export async function postEntryFromForm(
   notebookId: string,
   formData: FormData,
 ): Promise<void> {
-  const raw = formData.get("body");
+  const rawTitle = formData.get("title");
+  const rawBody = formData.get("body");
   await postEntry({
     notebookId,
-    body: typeof raw === "string" ? raw : "",
+    title: typeof rawTitle === "string" ? rawTitle : "",
+    body: typeof rawBody === "string" ? rawBody : "",
   });
   revalidatePath(`/notebooks/${notebookId}`);
   redirect(`/notebooks/${notebookId}`);

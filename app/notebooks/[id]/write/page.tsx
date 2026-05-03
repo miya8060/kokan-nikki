@@ -6,7 +6,7 @@ import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { auth } from "@/lib/auth";
 import { getNotebookDetail } from "@/lib/notebooks";
-import { ENTRY_BODY_MAX } from "@/lib/schemas/entry";
+import { ENTRY_BODY_MAX, ENTRY_TITLE_MAX } from "@/lib/schemas/entry";
 
 // F-TURN-05 の UI 側ガード。サーバー側の postEntry も同じ判定をするので二重に
 // なるが、URL を直接叩いた場合に書き込み画面が「描画されてしまう」のを避ける
@@ -52,6 +52,18 @@ export default async function NotebookWritePage({
 
       <Sticker tape className="p-8">
         <form action={submitAction} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-2 text-left">
+            <span className="text-ink-soft text-xs tracking-wider uppercase">
+              title
+            </span>
+            <input
+              name="title"
+              required
+              maxLength={ENTRY_TITLE_MAX}
+              placeholder="きょうの にっき タイトル"
+              className="border-ink text-ink focus:ring-pink rounded-2xl border-2 bg-white px-4 py-3 text-base shadow-[0_3px_0_var(--ink)] outline-none focus:ring-2"
+            />
+          </label>
           <label className="flex flex-col gap-2 text-left">
             <span className="text-ink-soft text-xs tracking-wider uppercase">
               body

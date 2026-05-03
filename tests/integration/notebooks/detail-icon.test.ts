@@ -72,4 +72,30 @@ describe("getNotebookDetail — member/entry/next-turn imageUrl (F-USER-02)", ()
     expect(detail.members[0].imageUrl).toBeNull();
     expect(detail.entries[0].authorImageUrl).toBeNull();
   });
+
+  it("entries[].title は付いていれば返り、未設定 entry は null で返る", async () => {
+    const prisma = getPrisma();
+    const author = await makeUser(prisma);
+    const notebook = await makeNotebook(prisma, { owner: author });
+    // title あり / なし (= 本番既存 entry の挙動) の両方を検証する。
+    await makeEntry(prisma, {
+      notebook,
+      author,
+      title: null,
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+    });
+    await makeEntry(prisma, {
+      notebook,
+      author,
+      title: "きょうの にっき",
+      createdAt: new Date("2026-01-02T00:00:00Z"),
+    });
+
+    const detail = await getNotebookDetail(notebook.id, author.id);
+    expect(detail).not.toBeNull();
+    if (!detail) return;
+    // 一覧は新しい順 → [0] が title 付き、[1] が title=null。
+    expect(detail.entries[0].title).toBe("きょうの にっき");
+    expect(detail.entries[1].title).toBeNull();
+  });
 });
