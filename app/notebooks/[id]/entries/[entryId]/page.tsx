@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { EntryBodyTypewriter } from "@/components/ui/EntryBodyTypewriter";
 import { Sticker } from "@/components/ui/Sticker";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { auth } from "@/lib/auth";
@@ -68,9 +69,10 @@ export default async function NotebookEntryDetailPage({
             {dateFormatter.format(entry.createdAt)}
           </time>
         </div>
-        <p className="text-ink mt-4 text-sm leading-7 whitespace-pre-wrap [overflow-wrap:anywhere]">
-          {entry.body}
-        </p>
+        <EntryBodyTypewriter
+          body={entry.body}
+          className="text-ink mt-4 text-sm leading-7 whitespace-pre-wrap [overflow-wrap:anywhere]"
+        />
       </Sticker>
 
       <p className="text-center">
