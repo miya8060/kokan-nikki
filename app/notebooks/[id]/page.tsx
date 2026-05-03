@@ -9,6 +9,8 @@ import { auth } from "@/lib/auth";
 import { getNotebookDetail } from "@/lib/notebooks";
 import { NUDGE_RATE_LIMIT_MS } from "@/lib/nudges";
 
+import { EntriesList } from "./_components/EntriesList";
+
 // F-TURN-04: タイムラインは新しい順。F-TURN-05 の UI 側ガードは /write 側で
 // 行うため、ここでは「自分のターンのときだけ書き込み導線を出す」までに留める。
 // F-NUDGE-01〜02: ターン外のメンバーには「もう書いた？」ボタンを出す。
@@ -147,42 +149,7 @@ export default async function NotebookDetailPage({
             </p>
           </Sticker>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {detail.entries.map((entry) => {
-              // title 必須化前に投稿された本番 entry は title=null。その場合は
-              // body 先頭 30 文字 + … で代替表示する。
-              const display =
-                entry.title ??
-                entry.body.slice(0, 30) +
-                  (entry.body.length > 30 ? "…" : "");
-              return (
-                <li key={entry.id}>
-                  <Link
-                    href={`/notebooks/${detail.id}/entries/${entry.id}`}
-                    className="block transition hover:-translate-y-0.5"
-                  >
-                    <Sticker className="p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-ink inline-flex items-center gap-2 font-[family-name:var(--font-mochi)] text-base">
-                          <UserAvatar
-                            imageValue={entry.authorImageUrl}
-                            displayName={entry.authorDisplayName}
-                          />
-                          <span className="truncate">{display}</span>
-                        </span>
-                        <time
-                          dateTime={entry.createdAt.toISOString()}
-                          className="text-ink-soft text-xs"
-                        >
-                          {dateFormatter.format(entry.createdAt)}
-                        </time>
-                      </div>
-                    </Sticker>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <EntriesList entries={detail.entries} notebookId={detail.id} />
         )}
       </section>
 
