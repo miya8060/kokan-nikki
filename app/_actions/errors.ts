@@ -84,7 +84,20 @@ export class SettingsError extends Error {
   }
 }
 
-export type UpdateProfileReason = "unauthenticated" | "invalid-input";
+// F-USER-01〜03 共通のプロファイル更新エラー。
+//   - upload-disabled    : BLOB_READ_WRITE_TOKEN 未設定 (Preview / 一部 dev) で
+//                          画像アップロード経路を呼んだ
+//   - upload-too-large   : 1MB を超える File が来た (client canvas 後の想定 30KB
+//                          を大きく逸脱しているので異常系)
+//   - upload-invalid-type: jpeg/png/webp 以外の mime
+//   - upload-failed      : iconUploadSchema が他の理由で失敗 (空ファイル等)
+export type UpdateProfileReason =
+  | "unauthenticated"
+  | "invalid-input"
+  | "upload-disabled"
+  | "upload-too-large"
+  | "upload-invalid-type"
+  | "upload-failed";
 
 export class UpdateProfileError extends Error {
   readonly reason: UpdateProfileReason;

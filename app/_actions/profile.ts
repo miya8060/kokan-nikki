@@ -5,10 +5,30 @@ import { redirect } from "next/navigation";
 
 import { UpdateProfileError } from "@/app/_actions/errors";
 import { auth } from "@/lib/auth";
-import { serializePreset } from "@/lib/icons/presets";
+import { isUploadedIconUrl, serializePreset } from "@/lib/icons/presets";
 import { prisma } from "@/lib/prisma";
 import { isInternalCallbackUrl } from "@/lib/safe-redirect";
-import { displayNameSchema, iconFormValueSchema } from "@/lib/schemas/user";
+import {
+  displayNameSchema,
+  iconFormValueSchema,
+  iconUploadSchema,
+} from "@/lib/schemas/user";
+
+// F-USER-03: 旧アップロード画像が残っていれば Vercel Blob から削除する。
+// 削除失敗 (既に消えている / 別 store の URL 等) は新画像の保存を邪魔しないよう
+// 飲み込む (孤児 blob は残るが致命的ではない)。
+async function deleteOldUploadedIcon(image: string | null): Promise<void> {
+  if (!isUploadedIconUrl(image)) return;
+  try {
+    const { del } = await import("@vercel/blob");
+    await del(image);
+  } catch (e) {
+    console.warn("[profile] failed to delete old icon blob", {
+      image,
+      error: e,
+    });
+  }
+}
 
 // F-USER-01: 表示名 (User.name) を更新する Server Action。
 // onboarding (/onboarding/name) と /settings の両方から呼ばれる:
@@ -53,6 +73,7 @@ export async function setDisplayName(formData: FormData): Promise<void> {
 //   - "heart" | "star" | "plus" | "dot" : preset:KEY を保存
 // SSR 側 (notebooks 一覧 / 詳細) で member.user.image を直接参照するため
 // revalidatePath は root layout で行う。
+// F-USER-03: 旧 image がアップロード URL なら Vercel Blob からも削除して孤児を残さない。
 export async function setIcon(formData: FormData): Promise<void> {
   const session = await auth();
   const userId = session?.user?.id;
@@ -68,10 +89,71 @@ export async function setIcon(formData: FormData): Promise<void> {
 
   const image = parsed.data === "" ? null : serializePreset(parsed.data);
 
+  const current = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { image: true },
+  });
+
   await prisma.user.update({
     where: { id: userId },
     data: { image },
   });
+
+  await deleteOldUploadedIcon(current?.image ?? null);
+
+  revalidatePath("/", "layout");
+}
+
+// F-USER-03: アイコン画像をアップロードする Server Action。/settings の
+// IconUploadForm (Client Component) が canvas で 256x256 jpeg に正規化した
+// File を multipart で送ってくる。Server 側でも mime / size を再検証 (信頼源)。
+//   - BLOB_READ_WRITE_TOKEN 未設定 (Preview / 一部 dev): "upload-disabled" で
+//     422 相当を返す。preset 経路はこのとき通常通り使える。
+//   - put は addRandomSuffix=true (デフォルト) なので key の衝突は SDK 側で吸収。
+//   - put 成功後、旧 image がアップロード URL なら同期 del() で消す。失敗は
+//     ログだけ残して続行 (孤児 blob を許容)。
+export async function uploadIcon(formData: FormData): Promise<void> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    throw new UpdateProfileError("unauthenticated");
+  }
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new UpdateProfileError("upload-disabled");
+  }
+
+  const parsed = iconUploadSchema.safeParse({ file: formData.get("file") });
+  if (!parsed.success) {
+    const code = parsed.error.issues[0]?.message;
+    if (code === "too-large") {
+      throw new UpdateProfileError("upload-too-large");
+    }
+    if (code === "invalid-type") {
+      throw new UpdateProfileError("upload-invalid-type");
+    }
+    throw new UpdateProfileError("upload-failed");
+  }
+
+  const { file } = parsed.data;
+
+  const current = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { image: true },
+  });
+
+  const { put } = await import("@vercel/blob");
+  const result = await put(`users/${userId}/icon.jpg`, file, {
+    access: "public",
+    contentType: "image/jpeg",
+  });
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { image: result.url },
+  });
+
+  await deleteOldUploadedIcon(current?.image ?? null);
 
   revalidatePath("/", "layout");
 }
