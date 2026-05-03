@@ -22,3 +22,25 @@ export const displayNameSchema = z
 export const iconPresetSchema = z.enum(ICON_PRESET_KEYS);
 
 export const iconFormValueSchema = z.union([z.literal(""), iconPresetSchema]);
+
+// F-USER-03: アイコンの画像アップロード入力。client canvas で 256x256 jpeg に
+// 正規化済みの File を受ける想定 (実測 ~30KB)。Server Actions のデフォルト上限
+// 1MB に対する保険として MAX_BYTES を 1MB に置く。mime は client / Server 両方で
+// チェック (信頼源は Server)。
+export const ICON_UPLOAD_MAX_BYTES = 1024 * 1024;
+export const ICON_UPLOAD_ALLOWED_MIME = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
+export const iconUploadSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine((f) => f.size > 0, "empty")
+    .refine((f) => f.size <= ICON_UPLOAD_MAX_BYTES, "too-large")
+    .refine(
+      (f) => (ICON_UPLOAD_ALLOWED_MIME as readonly string[]).includes(f.type),
+      "invalid-type",
+    ),
+});

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { setDisplayName, setIcon } from "@/app/_actions/profile";
 import { setCursor, setPalette } from "@/app/_actions/settings";
+import { IconUploadForm } from "@/app/settings/IconUploadForm";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -11,7 +12,7 @@ import { auth } from "@/lib/auth";
 import {
   ICON_PRESET_KEYS,
   ICON_PRESET_LABELS,
-  parsePresetKey,
+  parseIconValue,
   serializePreset,
   type IconPresetKey,
 } from "@/lib/icons/presets";
@@ -46,8 +47,20 @@ export default async function SettingsPage() {
   const cursorEnabled = parseCursorEnabled(
     cookieStore.get(CURSOR_COOKIE)?.value,
   );
-  const currentIconKey = parsePresetKey(session.user.image ?? null);
+  const currentIcon = parseIconValue(session.user.image ?? null);
+  const currentIconKey =
+    currentIcon.kind === "preset" ? currentIcon.key : null;
+  const currentIconLabel =
+    currentIcon.kind === "preset"
+      ? ICON_PRESET_LABELS[currentIcon.key]
+      : currentIcon.kind === "url"
+        ? "じぶんで えらんだ がぞう"
+        : "デフォルト";
   const displayName = session.user.name;
+  // F-USER-03: Vercel Blob の token が無い環境 (Preview / 一部 dev) では
+  // アップロード経路を UI でも disable する。Server 側でも同じ env を見て 422
+  // を返すので、UI を信用源にしない多重防御。
+  const uploadEnabled = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
@@ -107,12 +120,7 @@ export default async function SettingsPage() {
             size="md"
           />
           <span className="text-ink-soft text-xs">
-            いま:{" "}
-            <strong className="text-ink">
-              {currentIconKey
-                ? ICON_PRESET_LABELS[currentIconKey]
-                : "デフォルト"}
-            </strong>
+            いま: <strong className="text-ink">{currentIconLabel}</strong>
           </span>
         </div>
         <form
@@ -121,11 +129,11 @@ export default async function SettingsPage() {
           data-testid="icon-form"
         >
           <fieldset className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-            <legend className="sr-only">アイコンを選ぶ</legend>
+            <legend className="sr-only">プリセットから アイコンを選ぶ</legend>
             <IconOption
               presetKey={null}
               displayName={displayName}
-              checked={currentIconKey === null}
+              checked={currentIcon.kind === "default"}
             />
             {ICON_PRESET_KEYS.map((key) => (
               <IconOption
@@ -142,6 +150,7 @@ export default async function SettingsPage() {
             </PuffButton>
           </div>
         </form>
+        <IconUploadForm uploadEnabled={uploadEnabled} />
       </Sticker>
 
       <Sticker tape className="p-8">

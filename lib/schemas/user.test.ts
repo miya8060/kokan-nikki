@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   DISPLAY_NAME_MAX,
   displayNameSchema,
+  ICON_UPLOAD_MAX_BYTES,
   iconFormValueSchema,
   iconPresetSchema,
+  iconUploadSchema,
 } from "./user";
 
 // testing.md §4.1 — F-USER-01 の表示名バリデーションを zod 単体で確認。
@@ -84,5 +86,57 @@ describe("iconFormValueSchema (F-USER-02)", () => {
 describe("iconPresetSchema (F-USER-02)", () => {
   it("空文字は拒否される (デフォルト戻しを表せるのは form schema 側のみ)", () => {
     expect(iconPresetSchema.safeParse("").success).toBe(false);
+  });
+});
+
+// F-USER-03: アップロード入力 (client で 256x256 jpeg 化済みの File) の検証。
+// Server Action 側で safeParse するため、size / mime / 空ファイルそれぞれの
+// 失敗 message が後段の UpdateProfileError code にマップされる。
+describe("iconUploadSchema (F-USER-03)", () => {
+  function makeFile(size: number, type: string): File {
+    const bytes = new Uint8Array(size);
+    return new File([bytes], "icon.jpg", { type });
+  }
+
+  it.each(["image/jpeg", "image/png", "image/webp"] as const)(
+    "%s で size 正常なら受理",
+    (mime) => {
+      const file = makeFile(1024, mime);
+      const parsed = iconUploadSchema.safeParse({ file });
+      expect(parsed.success).toBe(true);
+    },
+  );
+
+  it("許可外 mime は invalid-type で失敗", () => {
+    const file = makeFile(1024, "text/plain");
+    const parsed = iconUploadSchema.safeParse({ file });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toBe("invalid-type");
+    }
+  });
+
+  it("size 超過は too-large で失敗", () => {
+    const file = makeFile(ICON_UPLOAD_MAX_BYTES + 1, "image/jpeg");
+    const parsed = iconUploadSchema.safeParse({ file });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toBe("too-large");
+    }
+  });
+
+  it("size 0 は empty で失敗", () => {
+    const file = makeFile(0, "image/jpeg");
+    const parsed = iconUploadSchema.safeParse({ file });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toBe("empty");
+    }
+  });
+
+  it("file が File でない (string) なら失敗", () => {
+    expect(iconUploadSchema.safeParse({ file: "not-a-file" }).success).toBe(
+      false,
+    );
   });
 });

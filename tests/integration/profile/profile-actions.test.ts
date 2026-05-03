@@ -3,20 +3,43 @@
 // (settings-actions.test.ts と同じ理由)。
 import { clearMockSession, setMockSession } from "@/tests/helpers/session";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
+  put: vi.fn(),
+  del: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
 }));
 
+// @vercel/blob は外部 API なので integration からも mock。put / del の呼ばれ方を
+// 主張するテストが多いので、戻り値だけ既定値を beforeEach で詰めなおす。
+vi.mock("@vercel/blob", () => ({
+  put: mocks.put,
+  del: mocks.del,
+}));
+
 import { UpdateProfileError } from "@/app/_actions/errors";
-import { setDisplayName, setIcon } from "@/app/_actions/profile";
+import { setIcon, setDisplayName, uploadIcon } from "@/app/_actions/profile";
 import { makeUser } from "@/tests/helpers/factories";
 import { getPrisma } from "@/tests/setup/db.per-test";
+
+const UPLOADED_URL = "https://test.public.blob.vercel-storage.com/users/u/icon.jpg";
+const OLD_UPLOADED_URL =
+  "https://test.public.blob.vercel-storage.com/users/u/old-icon.jpg";
+
+function makeJpegFile(size = 1024): File {
+  return new File([new Uint8Array(size)], "icon.jpg", { type: "image/jpeg" });
+}
+
+function makeUploadFormData(file: File): FormData {
+  const fd = new FormData();
+  fd.set("file", file);
+  return fd;
+}
 
 // F-USER-01 の Server Action を統合テスト。
 // - DB を実際に引いて User.name が更新されることを確認する。
@@ -45,6 +68,15 @@ function redirectUrlFrom(err: { digest: string }): string {
 beforeEach(() => {
   clearMockSession();
   mocks.revalidatePath.mockClear();
+  mocks.put.mockReset();
+  mocks.del.mockReset();
+  mocks.put.mockResolvedValue({ url: UPLOADED_URL });
+  mocks.del.mockResolvedValue(undefined);
+  vi.stubEnv("BLOB_READ_WRITE_TOKEN", "test-token");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("setDisplayName (F-USER-01)", () => {
@@ -223,5 +255,143 @@ describe("setIcon (F-USER-02)", () => {
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated?.image).toBeNull();
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("preset から preset への切替では del() を呼ばない (Blob URL ではないので孤児なし)", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma, { image: "preset:heart" });
+    setMockSession(user);
+
+    const fd = new FormData();
+    fd.set("icon", "star");
+
+    await setIcon(fd);
+
+    expect(mocks.del).not.toHaveBeenCalled();
+  });
+
+  it("URL → preset 遷移では旧 URL を Vercel Blob から削除する (F-USER-03)", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma, { image: OLD_UPLOADED_URL });
+    setMockSession(user);
+
+    const fd = new FormData();
+    fd.set("icon", "star");
+
+    await setIcon(fd);
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(updated?.image).toBe("preset:star");
+    expect(mocks.del).toHaveBeenCalledWith(OLD_UPLOADED_URL);
+  });
+});
+
+// F-USER-03: アイコン画像のアップロード Server Action。Vercel Blob は
+// vi.mock しているので put() が呼ばれた事実と DB 反映を主張する。
+describe("uploadIcon (F-USER-03)", () => {
+  it("未ログインなら UpdateProfileError('unauthenticated') を投げる", async () => {
+    await expect(uploadIcon(makeUploadFormData(makeJpegFile()))).rejects.toMatchObject({
+      name: "UpdateProfileError",
+      reason: "unauthenticated",
+    });
+    expect(mocks.put).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("BLOB_READ_WRITE_TOKEN 未設定なら 'upload-disabled' (Preview 経路)", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma);
+    setMockSession(user);
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+
+    await expect(uploadIcon(makeUploadFormData(makeJpegFile()))).rejects.toMatchObject({
+      reason: "upload-disabled",
+    });
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("正常系 (preset → URL): put が呼ばれて User.image に URL が入り、del は呼ばれない", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma, { image: "preset:heart" });
+    setMockSession(user);
+
+    await uploadIcon(makeUploadFormData(makeJpegFile()));
+
+    expect(mocks.put).toHaveBeenCalledTimes(1);
+    const [key, body, options] = mocks.put.mock.calls[0]!;
+    expect(key).toBe(`users/${user.id}/icon.jpg`);
+    expect(body).toBeInstanceOf(File);
+    expect(options).toMatchObject({ access: "public", contentType: "image/jpeg" });
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(updated?.image).toBe(UPLOADED_URL);
+    expect(mocks.del).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("正常系 (URL → URL): 旧 URL を del() してから新 URL に張り替え", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma, { image: OLD_UPLOADED_URL });
+    setMockSession(user);
+
+    await uploadIcon(makeUploadFormData(makeJpegFile()));
+
+    expect(mocks.put).toHaveBeenCalledTimes(1);
+    expect(mocks.del).toHaveBeenCalledWith(OLD_UPLOADED_URL);
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(updated?.image).toBe(UPLOADED_URL);
+  });
+
+  it("del() 失敗時は throw せずログだけ残して新 URL の保存は完了する", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma, { image: OLD_UPLOADED_URL });
+    setMockSession(user);
+    mocks.del.mockRejectedValueOnce(new Error("blob not found"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await uploadIcon(makeUploadFormData(makeJpegFile()));
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(updated?.image).toBe(UPLOADED_URL);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("許可外 mime (text/plain) は 'upload-invalid-type'", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma);
+    setMockSession(user);
+
+    const fd = makeUploadFormData(
+      new File([new Uint8Array(16)], "x.txt", { type: "text/plain" }),
+    );
+    await expect(uploadIcon(fd)).rejects.toMatchObject({
+      reason: "upload-invalid-type",
+    });
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("1MB 超過は 'upload-too-large'", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma);
+    setMockSession(user);
+
+    const fd = makeUploadFormData(makeJpegFile(1024 * 1024 + 1));
+    await expect(uploadIcon(fd)).rejects.toMatchObject({
+      reason: "upload-too-large",
+    });
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("file が無い (空 FormData) は 'upload-failed'", async () => {
+    const prisma = getPrisma();
+    const user = await makeUser(prisma);
+    setMockSession(user);
+
+    await expect(uploadIcon(new FormData())).rejects.toBeInstanceOf(
+      UpdateProfileError,
+    );
+    expect(mocks.put).not.toHaveBeenCalled();
   });
 });
