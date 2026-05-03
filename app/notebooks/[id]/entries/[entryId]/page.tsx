@@ -47,17 +47,17 @@ export default async function NotebookEntryDetailPage({
     entry.body.slice(0, 30) + (entry.body.length > 30 ? "…" : "");
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-16 sm:px-6">
       <header className="text-center">
-        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl">
+        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-2xl break-words sm:text-3xl">
           ♡ {heading}
         </h1>
-        <p className="text-ink-soft mt-2 text-sm">{detail.name}</p>
+        <p className="text-ink-soft mt-2 text-sm break-words">{detail.name}</p>
       </header>
 
-      <Sticker className="p-6">
+      <Sticker className="p-4 sm:p-6">
         <div className="text-ink-soft flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="text-ink inline-flex items-center gap-2 font-[family-name:var(--font-mochi)] text-base">
+          <span className="text-ink inline-flex min-w-0 items-center gap-2 font-[family-name:var(--font-mochi)] text-base break-words">
             <UserAvatar
               imageValue={entry.authorImageUrl}
               displayName={entry.authorDisplayName}
@@ -68,7 +68,7 @@ export default async function NotebookEntryDetailPage({
             {dateFormatter.format(entry.createdAt)}
           </time>
         </div>
-        <p className="text-ink mt-4 text-sm leading-7 whitespace-pre-wrap">
+        <p className="text-ink mt-4 text-sm leading-7 whitespace-pre-wrap [overflow-wrap:anywhere]">
           {entry.body}
         </p>
       </Sticker>
