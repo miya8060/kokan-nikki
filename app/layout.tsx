@@ -17,18 +17,24 @@ import {
 } from "@/lib/palette";
 import "./globals.css";
 
+// next/font/google が CJK フォントの全 unicode-range chunk を preload してしまう
+// (next 16.2.4 で 325 chunk / 6.4 MB が <link rel=preload> される) ため、
+// Japanese フォントは preload: false で配信。実 glyph に必要な chunk だけ
+// @font-face の unicode-range で遅延 DL される。display: swap でフォールバック表示。
 const mochi = Mochiy_Pop_One({
   variable: "--font-mochi",
   weight: "400",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const maru = Zen_Maru_Gothic({
   variable: "--font-maru",
-  weight: ["400", "500", "700", "900"],
+  weight: "400",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const pixel = DotGothic16({
@@ -36,11 +42,12 @@ const pixel = DotGothic16({
   weight: "400",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const hand = Caveat({
   variable: "--font-hand",
-  weight: ["400", "700"],
+  weight: "400",
   subsets: ["latin"],
   display: "swap",
 });
