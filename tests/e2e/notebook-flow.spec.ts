@@ -105,6 +105,7 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
   // --- (5) A が投稿 → 次のターンが B に渡る (F-TURN-02) ------------------
   await pageA.getByRole("link", { name: /きょうの にっきを かく/ }).click();
   await expect(pageA).toHaveURL(/\/write$/);
+  await pageA.getByLabel("title").fill("A の さいしょの ぺーじ");
   await pageA
     .getByLabel("body")
     .fill("きょうは A が さいしょの ぺーじを かいたよ ♡");
@@ -116,6 +117,10 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
   await expect(
     pageA.getByRole("button", { name: /もう かいた/ }),
   ).toBeVisible();
+  // 一覧は title 表示なので、いま投稿したタイトルが見える。
+  await expect(
+    pageA.getByRole("link", { name: /A の さいしょの ぺーじ/ }),
+  ).toBeVisible();
 
   // B 視点でも自分のターンに変わっている。
   await pageB.reload();
@@ -123,13 +128,32 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
   await expect(
     pageB.getByRole("link", { name: /きょうの にっきを かく/ }),
   ).toBeVisible();
-  // 直前に A が投稿したエントリがタイムラインに見える (F-TURN-04: 新しい順)。
+  // 直前に A が投稿した entry はタイトルで一覧に出ている (F-TURN-04: 新しい順)。
+  // 本文はタイトルをクリックしないと見えない。
+  await expect(
+    pageB.getByRole("link", { name: /A の さいしょの ぺーじ/ }),
+  ).toBeVisible();
+  await expect(
+    pageB.getByText("きょうは A が さいしょの ぺーじを かいたよ ♡"),
+  ).not.toBeVisible();
+
+  // タイトルをクリックして本文ページに遷移、← もどる で戻れる。
+  await pageB
+    .getByRole("link", { name: /A の さいしょの ぺーじ/ })
+    .click();
+  await expect(pageB).toHaveURL(/\/notebooks\/[a-z0-9]+\/entries\/[a-z0-9]+$/);
+  await expect(
+    pageB.getByRole("heading", { name: /A の さいしょの ぺーじ/ }),
+  ).toBeVisible();
   await expect(
     pageB.getByText("きょうは A が さいしょの ぺーじを かいたよ ♡"),
   ).toBeVisible();
+  await pageB.getByRole("link", { name: /にっき いちらん へ もどる/ }).click();
+  await expect(pageB).toHaveURL(/\/notebooks\/[a-z0-9]+$/);
 
   // --- (6) B が投稿 → 次のターンが A に戻る (F-TURN-04 cyclic) -----------
   await pageB.getByRole("link", { name: /きょうの にっきを かく/ }).click();
+  await pageB.getByLabel("title").fill("B から おへんじ");
   await pageB.getByLabel("body").fill("つぎは わたし、B からだよ ♡");
   await pageB.getByRole("button", { name: /かきおわった/ }).click();
   await expect(pageB).toHaveURL(/\/notebooks\/[a-z0-9]+$/);
@@ -138,12 +162,10 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
 
   await pageA.reload();
   await expect(pageA.getByText("あなた ♡")).toBeVisible();
-  // タイムラインは新しい順なので B の投稿が一番上。
+  // タイムラインは新しい順なので B のタイトルが一番上。
   const entries = pageA.locator("section ul li");
-  await expect(entries.nth(0)).toContainText("つぎは わたし、B からだよ");
-  await expect(entries.nth(1)).toContainText(
-    "きょうは A が さいしょの ぺーじを かいたよ",
-  );
+  await expect(entries.nth(0)).toContainText("B から おへんじ");
+  await expect(entries.nth(1)).toContainText("A の さいしょの ぺーじ");
 
   await checkA11y(pageA);
 

@@ -10,3 +10,15 @@ export const entryBodySchema = z
   .string()
   .min(ENTRY_BODY_MIN)
   .max(ENTRY_BODY_MAX);
+
+// 一覧で 1 行に収めるための運用上の上限 30 文字。notebookNameSchema と同じく
+// 改行は弾く（タイトル末尾改行で見た目が崩れるのを防ぐ）。
+export const ENTRY_TITLE_MIN = 1;
+export const ENTRY_TITLE_MAX = 30;
+
+export const entryTitleSchema = z
+  .string()
+  .trim()
+  .min(ENTRY_TITLE_MIN)
+  .max(ENTRY_TITLE_MAX)
+  .regex(/^[^\r\n]+$/, "改行は使えません");

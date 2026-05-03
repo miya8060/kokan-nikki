@@ -30,7 +30,11 @@ describe("postEntry guard (F-TURN-05 / NF-SEC-04)", () => {
     await makeEntry(prisma, { notebook, author: a });
 
     setMockSession(b);
-    const result = await postEntry({ notebookId: notebook.id, body: "hello" });
+    const result = await postEntry({
+      notebookId: notebook.id,
+      title: "きょうの にっき",
+      body: "hello",
+    });
 
     expect(result.entryId).toEqual(expect.any(String));
     const stored = await prisma.entry.findUnique({
@@ -39,6 +43,7 @@ describe("postEntry guard (F-TURN-05 / NF-SEC-04)", () => {
     expect(stored).toMatchObject({
       notebookId: notebook.id,
       authorId: b.id,
+      title: "きょうの にっき",
       body: "hello",
     });
   });
@@ -52,7 +57,11 @@ describe("postEntry guard (F-TURN-05 / NF-SEC-04)", () => {
     setMockSession(b);
 
     await expect(
-      postEntry({ notebookId: notebook.id, body: "out of turn" }),
+      postEntry({
+        notebookId: notebook.id,
+        title: "out of turn",
+        body: "out of turn",
+      }),
     ).rejects.toMatchObject({
       name: "PostEntryError",
       reason: "not-your-turn",
@@ -74,7 +83,11 @@ describe("postEntry guard (F-TURN-05 / NF-SEC-04)", () => {
     setMockSession(stranger);
 
     await expect(
-      postEntry({ notebookId: notebook.id, body: "trespass" }),
+      postEntry({
+        notebookId: notebook.id,
+        title: "trespass",
+        body: "trespass",
+      }),
     ).rejects.toMatchObject({
       name: "PostEntryError",
       reason: "not-member",
@@ -93,11 +106,84 @@ describe("postEntry guard (F-TURN-05 / NF-SEC-04)", () => {
     // setMockSession を呼ばないので auth() は null を返す。
 
     await expect(
-      postEntry({ notebookId: notebook.id, body: "anonymous" }),
+      postEntry({
+        notebookId: notebook.id,
+        title: "anonymous",
+        body: "anonymous",
+      }),
     ).rejects.toBeInstanceOf(PostEntryError);
     await expect(
-      postEntry({ notebookId: notebook.id, body: "anonymous" }),
+      postEntry({
+        notebookId: notebook.id,
+        title: "anonymous",
+        body: "anonymous",
+      }),
     ).rejects.toMatchObject({ reason: "unauthenticated" });
+
+    const count = await prisma.entry.count({
+      where: { notebookId: notebook.id },
+    });
+    expect(count).toBe(0);
+  });
+
+  it("title が空の postEntry は invalid-input で拒否される", async () => {
+    const prisma = getPrisma();
+    const owner = await makeUser(prisma);
+    const notebook = await makeNotebook(prisma, { owner });
+    setMockSession(owner);
+
+    await expect(
+      postEntry({ notebookId: notebook.id, title: "", body: "ok" }),
+    ).rejects.toMatchObject({
+      name: "PostEntryError",
+      reason: "invalid-input",
+    });
+
+    const count = await prisma.entry.count({
+      where: { notebookId: notebook.id },
+    });
+    expect(count).toBe(0);
+  });
+
+  it("title が 31 文字の postEntry は invalid-input で拒否される", async () => {
+    const prisma = getPrisma();
+    const owner = await makeUser(prisma);
+    const notebook = await makeNotebook(prisma, { owner });
+    setMockSession(owner);
+
+    await expect(
+      postEntry({
+        notebookId: notebook.id,
+        title: "a".repeat(31),
+        body: "ok",
+      }),
+    ).rejects.toMatchObject({
+      name: "PostEntryError",
+      reason: "invalid-input",
+    });
+
+    const count = await prisma.entry.count({
+      where: { notebookId: notebook.id },
+    });
+    expect(count).toBe(0);
+  });
+
+  it("title が改行を含む postEntry は invalid-input で拒否される", async () => {
+    const prisma = getPrisma();
+    const owner = await makeUser(prisma);
+    const notebook = await makeNotebook(prisma, { owner });
+    setMockSession(owner);
+
+    await expect(
+      postEntry({
+        notebookId: notebook.id,
+        title: "hello\nworld",
+        body: "ok",
+      }),
+    ).rejects.toMatchObject({
+      name: "PostEntryError",
+      reason: "invalid-input",
+    });
 
     const count = await prisma.entry.count({
       where: { notebookId: notebook.id },

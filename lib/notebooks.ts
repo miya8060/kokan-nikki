@@ -15,6 +15,7 @@ export type NotebookDetailMember = {
 
 export type NotebookDetailEntry = {
   id: string;
+  title: string | null;
   body: string;
   createdAt: Date;
   authorId: string;
@@ -63,6 +64,10 @@ export async function getNotebookDetail(
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         select: {
           id: true,
+          title: true,
+          // 一覧は title で表示するが、本番既存 entry (title=null) の fallback で
+          // 先頭 30 文字を出すために body も引いておく。詳細ページでも使うので、
+          // SQL 側 substring 化は今回見送り。
           body: true,
           createdAt: true,
           authorId: true,
@@ -84,6 +89,7 @@ export async function getNotebookDetail(
   }));
   const entries: NotebookDetailEntry[] = notebook.entries.map((e) => ({
     id: e.id,
+    title: e.title,
     body: e.body,
     createdAt: e.createdAt,
     authorId: e.authorId,

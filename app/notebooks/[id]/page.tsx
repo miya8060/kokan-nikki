@@ -147,28 +147,41 @@ export default async function NotebookDetailPage({
             </p>
           </Sticker>
         ) : (
-          <ul className="flex flex-col gap-4">
-            {detail.entries.map((entry) => (
-              <li key={entry.id}>
-                <Sticker className="p-6">
-                  <header className="text-ink-soft flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span className="text-ink inline-flex items-center gap-2 font-[family-name:var(--font-mochi)] text-base">
-                      <UserAvatar
-                        imageValue={entry.authorImageUrl}
-                        displayName={entry.authorDisplayName}
-                      />
-                      {entry.authorDisplayName}
-                    </span>
-                    <time dateTime={entry.createdAt.toISOString()}>
-                      {dateFormatter.format(entry.createdAt)}
-                    </time>
-                  </header>
-                  <p className="text-ink mt-3 text-sm leading-7 whitespace-pre-wrap">
-                    {entry.body}
-                  </p>
-                </Sticker>
-              </li>
-            ))}
+          <ul className="flex flex-col gap-3">
+            {detail.entries.map((entry) => {
+              // title 必須化前に投稿された本番 entry は title=null。その場合は
+              // body 先頭 30 文字 + … で代替表示する。
+              const display =
+                entry.title ??
+                entry.body.slice(0, 30) +
+                  (entry.body.length > 30 ? "…" : "");
+              return (
+                <li key={entry.id}>
+                  <Link
+                    href={`/notebooks/${detail.id}/entries/${entry.id}`}
+                    className="block transition hover:-translate-y-0.5"
+                  >
+                    <Sticker className="p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-ink inline-flex items-center gap-2 font-[family-name:var(--font-mochi)] text-base">
+                          <UserAvatar
+                            imageValue={entry.authorImageUrl}
+                            displayName={entry.authorDisplayName}
+                          />
+                          <span className="truncate">{display}</span>
+                        </span>
+                        <time
+                          dateTime={entry.createdAt.toISOString()}
+                          className="text-ink-soft text-xs"
+                        >
+                          {dateFormatter.format(entry.createdAt)}
+                        </time>
+                      </div>
+                    </Sticker>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
