@@ -94,7 +94,7 @@ export default async function Home() {
           <p className="text-ink-soft mt-7 text-base leading-7">
             きょうの きもちを、ともだちと そっと わけあう。
             <br />
-            まずは おなまえを おしえてね ♡
+            にっきの せかいに あそびにいこう！
           </p>
 
           <div className="mt-10 flex flex-wrap justify-center gap-4">
