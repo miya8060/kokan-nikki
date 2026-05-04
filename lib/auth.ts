@@ -1,42 +1,14 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth, { type NextAuthConfig } from "next-auth";
-import { cookies } from "next/headers";
 import Google from "next-auth/providers/google";
 import Line from "next-auth/providers/line";
 import Resend from "next-auth/providers/resend";
 import Twitter from "next-auth/providers/twitter";
 
-import {
-  generateCsrfToken,
-  readLinkIntent,
-  setLinkIntentPending,
-} from "@/lib/auth/link-intent";
+import { handleTwitterLinkSignIn } from "@/lib/auth/link-callback";
 import { sendMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 import { wrapCallbackUrl } from "@/lib/safe-redirect";
-
-// 現セッション cookie から DB を参照して userId を返す。signIn callback 内で
-// `auth()` を self-reference すると TDZ になるので、Auth.js の database session
-// cookie を直接 lookup する。AUTH_URL=http のとき __Secure- prefix は付かない
-// (memory: project_authjs_cookie_prefix)。
-async function readSessionUserId(): Promise<string | null> {
-  const isHttps =
-    process.env.NODE_ENV === "production" ||
-    (process.env.AUTH_URL?.startsWith("https://") ?? false);
-  const cookieName = isHttps
-    ? "__Secure-authjs.session-token"
-    : "authjs.session-token";
-  const c = await cookies();
-  const token = c.get(cookieName)?.value;
-  if (!token) return null;
-  const session = await prisma.session.findUnique({
-    where: { sessionToken: token },
-    select: { userId: true, expires: true },
-  });
-  if (!session) return null;
-  if (session.expires <= new Date()) return null;
-  return session.userId;
-}
 
 // NF-SEC-01: Auth.js v5 (5.0.0-beta.31) は AUTH_SECRET 不在でも
 // NextAuth(config) は throw せず、最初のリクエスト時に MissingSecret を返す
@@ -137,89 +109,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     // F-AUTH-06 / issue #68 Stage 2
-    // Linking flow を成立させるための分岐は基本的にここに集約する。
-    // - linking 中でない通常 OAuth → そのまま signin (true)
-    // - linking 中 + X account がまだ DB に無い (Case 1) → 現 User#A に
-    //   Account を後付けして /settings/link/result に飛ばし session 切替を
-    //   止める (URL を返す)
-    // - linking 中 + 既存 X account が別 user (User#B) に link 済 (Case 2) →
-    //   pending-confirm cookie に fromUserId を載せ /settings/link/confirm に
-    //   飛ばす。実際の merge は /settings/link/confirm 側で 2 段階確認を経て
-    //   走るので、ここでは絶対に DB を破壊しない。
-    // - linking 中 + X account が既に同 user (User#A) に link 済 → already。
+    // X (twitter) provider の linking flow は別モジュールに切り出してある。
+    // 他 provider は通常通り pass-through。
     async signIn({ account }) {
       if (!account || account.provider !== "twitter") return true;
-      const intent = await readLinkIntent();
-      if (!intent || intent.state !== "started") return true;
-
-      // cross-tab で別 user に session が swap された状態で OAuth callback が
-      // 来たケースの防御: cookie が指す toUserId と現 session が一致しないなら
-      // linking を成立させない。
-      const sessionUserId = await readSessionUserId();
-      if (!sessionUserId || sessionUserId !== intent.toUserId) {
-        return "/settings?link=error";
-      }
-
-      const targetUserId = intent.toUserId;
-      const existing = await prisma.account.findUnique({
-        where: {
-          provider_providerAccountId: {
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
-          },
-        },
-        select: { userId: true },
-      });
-
-      if (!existing) {
-        try {
-          await prisma.account.create({
-            data: {
-              userId: targetUserId,
-              type: account.type ?? "oauth",
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              access_token:
-                typeof account.access_token === "string"
-                  ? account.access_token
-                  : null,
-              refresh_token:
-                typeof account.refresh_token === "string"
-                  ? account.refresh_token
-                  : null,
-              expires_at:
-                typeof account.expires_at === "number"
-                  ? account.expires_at
-                  : null,
-              token_type:
-                typeof account.token_type === "string"
-                  ? account.token_type
-                  : null,
-              scope: typeof account.scope === "string" ? account.scope : null,
-              id_token:
-                typeof account.id_token === "string" ? account.id_token : null,
-              session_state:
-                typeof account.session_state === "string"
-                  ? account.session_state
-                  : null,
-            },
-          });
-        } catch {
-          return "/settings?link=error";
-        }
-        return "/settings/link/result?status=linked";
-      }
-
-      if (existing.userId === targetUserId) {
-        return "/settings/link/result?status=already";
-      }
-
-      await setLinkIntentPending({
-        toUserId: targetUserId,
-        fromUserId: existing.userId,
-        csrf: generateCsrfToken(),
-      });
-      return "/settings/link/confirm";
+      return handleTwitterLinkSignIn(account);
     },
   },
 });
