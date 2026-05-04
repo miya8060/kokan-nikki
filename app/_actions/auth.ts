@@ -14,7 +14,7 @@ export async function requestSignIn(formData: FormData) {
   await signIn("resend", formData);
 }
 
-const OAUTH_PROVIDERS = ["google", "line"] as const;
+const OAUTH_PROVIDERS = ["google", "line", "twitter"] as const;
 type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
 
 function isOAuthProvider(value: unknown): value is OAuthProvider {

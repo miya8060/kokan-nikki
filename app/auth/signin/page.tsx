@@ -51,7 +51,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </div>
         </form>
 
-        {(oauthProviders.google || oauthProviders.line) && (
+        {(oauthProviders.google ||
+          oauthProviders.line ||
+          oauthProviders.twitter) && (
           <>
             <div className="text-ink-soft mt-8 flex items-center gap-3 text-xs tracking-wider uppercase">
               <span className="bg-ink-soft/30 h-px flex-1" />
@@ -63,16 +65,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               {oauthProviders.google && (
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="google" />
-                  <input
-                    type="hidden"
-                    name="redirectTo"
-                    value={redirectTo}
-                  />
-                  <PuffButton
-                    type="submit"
-                    variant="alt"
-                    className="w-full"
-                  >
+                  <input type="hidden" name="redirectTo" value={redirectTo} />
+                  <PuffButton type="submit" variant="alt" className="w-full">
                     ♡ Google で さいんいん
                   </PuffButton>
                 </form>
@@ -80,17 +74,18 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               {oauthProviders.line && (
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="line" />
-                  <input
-                    type="hidden"
-                    name="redirectTo"
-                    value={redirectTo}
-                  />
-                  <PuffButton
-                    type="submit"
-                    variant="alt"
-                    className="w-full"
-                  >
+                  <input type="hidden" name="redirectTo" value={redirectTo} />
+                  <PuffButton type="submit" variant="alt" className="w-full">
                     ♡ LINE で さいんいん
+                  </PuffButton>
+                </form>
+              )}
+              {oauthProviders.twitter && (
+                <form action={signInWithOAuth}>
+                  <input type="hidden" name="provider" value="twitter" />
+                  <input type="hidden" name="redirectTo" value={redirectTo} />
+                  <PuffButton type="submit" variant="alt" className="w-full">
+                    ♡ X で さいんいん
                   </PuffButton>
                 </form>
               )}

@@ -62,16 +62,16 @@ export default async function NotebooksPage() {
       const nextTurnUser = nextTurnUserId
         ? await prisma.user.findUnique({
             where: { id: nextTurnUserId },
-            select: { id: true, name: true, email: true, image: true },
+            select: { id: true, name: true, image: true },
           })
         : null;
       return {
         id: notebook.id,
         name: notebook.name,
         lastUpdatedAt,
-        nextTurnLabel: nextTurnUser
-          ? (nextTurnUser.name ?? nextTurnUser.email)
-          : "—",
+        // F-AUTH-05: email は nullable になったので fallback には使えない。
+        // name 未設定の user (X 経由 + onboarding 未完了) は placeholder。
+        nextTurnLabel: nextTurnUser ? (nextTurnUser.name ?? "ななしさん") : "—",
         nextTurnImageUrl: nextTurnUser?.image ?? null,
         isYourTurn: nextTurnUserId === userId,
       };

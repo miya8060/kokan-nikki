@@ -3,6 +3,7 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import Line from "next-auth/providers/line";
 import Resend from "next-auth/providers/resend";
+import Twitter from "next-auth/providers/twitter";
 
 import { sendMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
@@ -26,6 +27,9 @@ if (!process.env.AUTH_SECRET) {
 export const oauthProviders = {
   google: Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET),
   line: Boolean(process.env.AUTH_LINE_ID && process.env.AUTH_LINE_SECRET),
+  twitter: Boolean(
+    process.env.AUTH_TWITTER_ID && process.env.AUTH_TWITTER_SECRET,
+  ),
 } as const;
 
 const providers: NextAuthConfig["providers"] = [
@@ -79,10 +83,19 @@ if (oauthProviders.line) {
   );
 }
 
-// X (Twitter) OAuth 2.0 は仕様上 email を返さないため、現行 schema
-// (User.email String @unique non-null) では User 作成に失敗する。対応するには
-// prisma schema の email を nullable 化 + 既存 email 前提コードの棚卸しが
-// 必要。別 issue / PR で扱う。
+if (oauthProviders.twitter) {
+  providers.push(
+    Twitter({
+      clientId: process.env.AUTH_TWITTER_ID,
+      clientSecret: process.env.AUTH_TWITTER_SECRET,
+      // X OAuth 2.0 は email を返さないので account-linking の判断材料が
+      // ない。allowDangerousEmailAccountLinking はそもそも email がない以上
+      // 効かない (linking キーは provider+providerAccountId)。同じ人が X /
+      // Google / magic-link で 3 回サインインすると 3 user に分裂する点は
+      // 仕様。後でアプリ内 merge 機能を作るかは別議論 (#61 後続)。
+    }),
+  );
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),

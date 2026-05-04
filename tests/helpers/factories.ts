@@ -27,7 +27,12 @@ export async function makeUser(
   // 検証するテストでは overrides.image に "preset:KEY" を渡す。
   return prisma.user.create({
     data: {
-      email: overrides.email ?? `${rand()}@test.local`,
+      // F-AUTH-05: email は nullable (X 等 email 非提供 OAuth)。`null` を明示
+      // 指定したいテスト (cron nudge skip 検証など) のために `in` で分岐する。
+      email:
+        "email" in overrides
+          ? (overrides.email ?? null)
+          : `${rand()}@test.local`,
       name: "name" in overrides ? (overrides.name ?? null) : `user-${rand()}`,
       image: "image" in overrides ? (overrides.image ?? null) : null,
       emailVerified: new Date(),

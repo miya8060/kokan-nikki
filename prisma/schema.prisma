@@ -18,7 +18,11 @@ datasource db {
 // ─────────────────────────────────────────────
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique
+  // F-AUTH-05: X (Twitter) OAuth 2.0 など email を返さない provider を受け
+  // 入れるため nullable。@unique は維持 (Postgres の UNIQUE は NULL を複数
+  // 許容するので衝突しない)。email を持たない user は cron nudge から除外
+  // される (app/api/cron/nudge/route.ts) など、各 touchpoint で個別に扱う。
+  email         String?   @unique
   name          String?
   emailVerified DateTime?
   image         String?

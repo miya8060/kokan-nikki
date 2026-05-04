@@ -9,11 +9,7 @@ vi.mock("@/lib/mailer", () => ({
 
 import { GET } from "@/app/api/cron/nudge/route";
 import { sendMail } from "@/lib/mailer";
-import {
-  makeEntry,
-  makeNotebook,
-  makeUser,
-} from "@/tests/helpers/factories";
+import { makeEntry, makeNotebook, makeUser } from "@/tests/helpers/factories";
 import { getPrisma } from "@/tests/setup/db.per-test";
 
 const TEST_SECRET = "test-cron-secret-deadbeef-cafef00d";
@@ -229,7 +225,7 @@ describe("GET /api/cron/nudge (F-NUDGE-04 / NF-SEC-02)", () => {
       expect(call.subject).toContain("stale lines");
     });
 
-    it("name 未設定のユーザでも email が宛先・差し込みに使われる", async () => {
+    it("name 未設定のユーザでは差し込みが「ななしさん」にフォールバックする (F-AUTH-05)", async () => {
       const prisma = getPrisma();
       const a = await makeUser(prisma);
       const b = await makeUser(prisma, {
@@ -246,7 +242,32 @@ describe("GET /api/cron/nudge (F-NUDGE-04 / NF-SEC-02)", () => {
       await GET(makeReq(`Bearer ${TEST_SECRET}`));
       const call = vi.mocked(sendMail).mock.calls[0][0];
       expect(call.to).toBe("noname@test.local");
-      expect(call.text).toContain("noname@test.local");
+      expect(call.text).toContain("ななしさん さんへ");
+    });
+
+    it("email を持たないユーザは silent skip (F-AUTH-05; X 等 email 非提供 OAuth 用)", async () => {
+      const prisma = getPrisma();
+      const a = await makeUser(prisma);
+      const b = await makeUser(prisma, { email: null, name: "びーさん" });
+      const nb = await makeNotebook(prisma, { owner: a, members: [b] });
+      await makeEntry(prisma, {
+        notebook: nb,
+        author: a,
+        createdAt: new Date(Date.now() - 80 * 60 * 60 * 1000),
+      });
+
+      const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        sent: unknown[];
+        skipped: { notebookId: string; reason: string }[];
+      };
+      expect(body.sent).toHaveLength(0);
+      expect(body.skipped).toContainEqual({
+        notebookId: nb.id,
+        reason: "no-email",
+      });
+      expect(sendMail).not.toHaveBeenCalled();
     });
   });
 });
