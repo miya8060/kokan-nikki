@@ -74,11 +74,10 @@ if (oauthProviders.line) {
     Line({
       clientId: process.env.AUTH_LINE_ID,
       clientSecret: process.env.AUTH_LINE_SECRET,
-      // LINE は email scope をチャネル側で申請通過させたうえで本人確認も
-      // 経由している前提なら link を許して良いが、確証が取れるまで OFF。
-      // 同一 email の magic-link ユーザーが先に居ると OAuthAccountNotLinked
-      // を返すので、運用判断後にここを true に切り替える。
-      allowDangerousEmailAccountLinking: false,
+      // LINE はメアド登録時にメール認証を経由しているので、返ってくる email
+      // は LINE 側で本人確認済みと見なせる。Google と同じ扱いで既存の
+      // magic-link / Google ユーザーと自動 link する。
+      allowDangerousEmailAccountLinking: true,
     }),
   );
 }
