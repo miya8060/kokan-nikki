@@ -1,5 +1,7 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
+import Google from "next-auth/providers/google";
+import Line from "next-auth/providers/line";
 import Resend from "next-auth/providers/resend";
 
 import { sendMail } from "@/lib/mailer";
@@ -18,35 +20,76 @@ if (!process.env.AUTH_SECRET) {
   );
 }
 
+// OAuth provider は env が両方揃っているときだけ enable する。
+// preview / dev で key 未設定でもアプリが起動できるようにするため。
+// signin UI 側でも同じ判定を使い、未設定の provider はボタンを出さない。
+export const oauthProviders = {
+  google: Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET),
+  line: Boolean(process.env.AUTH_LINE_ID && process.env.AUTH_LINE_SECRET),
+} as const;
+
+const providers: NextAuthConfig["providers"] = [
+  Resend({
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.EMAIL_FROM,
+    // Override so dev (RESEND_API_KEY="") falls back to tmp/dev-mailbox via
+    // lib/mailer.ts. In prod this still goes through Resend.
+    async sendVerificationRequest({ identifier: to, url, provider }) {
+      const { host } = new URL(url);
+      // NF-SEC: 本物の callback URL を /auth/confirm でラップして scanner
+      // (Gmail link preview 等) のプリフェッチで token が消費されるのを
+      // 防ぐ。ユーザーが confirmation page でボタンを 1 回クリックして
+      // 初めて本物の callback URL に遷移し、token が消費される。
+      const link = wrapCallbackUrl(url);
+      await sendMail({
+        to,
+        from: provider.from ?? "kokan-nikki <noreply@example.invalid>",
+        subject: `Sign in to ${host}`,
+        text: `${host} に サインイン するには、以下のリンクを ふんで ね ♡\n\n${link}\n\n10 ふんで きえるよ。`,
+        html: `<p>${host} に サインイン するには、以下のリンクを ふんで ね ♡</p><p><a href="${link}">${link}</a></p><p>10 ふんで きえるよ。</p>`,
+        kind: "verification",
+      });
+    },
+  }),
+];
+
+if (oauthProviders.google) {
+  providers.push(
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      // Google は profile に email_verified を返すので、既存の magic-link
+      // ユーザー (= email 所有確認済) と自動 link しても安全。
+      allowDangerousEmailAccountLinking: true,
+    }),
+  );
+}
+
+if (oauthProviders.line) {
+  providers.push(
+    Line({
+      clientId: process.env.AUTH_LINE_ID,
+      clientSecret: process.env.AUTH_LINE_SECRET,
+      // LINE は email scope をチャネル側で申請通過させたうえで本人確認も
+      // 経由している前提なら link を許して良いが、確証が取れるまで OFF。
+      // 同一 email の magic-link ユーザーが先に居ると OAuthAccountNotLinked
+      // を返すので、運用判断後にここを true に切り替える。
+      allowDangerousEmailAccountLinking: false,
+    }),
+  );
+}
+
+// X (Twitter) OAuth 2.0 は仕様上 email を返さないため、現行 schema
+// (User.email String @unique non-null) では User 作成に失敗する。対応するには
+// prisma schema の email を nullable 化 + 既存 email 前提コードの棚卸しが
+// 必要。別 issue / PR で扱う。
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "database" },
   // The Email provider family requires an adapter and forces JWT off; database
   // sessions are persisted in the Session table per F-AUTH-03.
-  providers: [
-    Resend({
-      apiKey: process.env.RESEND_API_KEY,
-      from: process.env.EMAIL_FROM,
-      // Override so dev (RESEND_API_KEY="") falls back to tmp/dev-mailbox via
-      // lib/mailer.ts. In prod this still goes through Resend.
-      async sendVerificationRequest({ identifier: to, url, provider }) {
-        const { host } = new URL(url);
-        // NF-SEC: 本物の callback URL を /auth/confirm でラップして scanner
-        // (Gmail link preview 等) のプリフェッチで token が消費されるのを
-        // 防ぐ。ユーザーが confirmation page でボタンを 1 回クリックして
-        // 初めて本物の callback URL に遷移し、token が消費される。
-        const link = wrapCallbackUrl(url);
-        await sendMail({
-          to,
-          from: provider.from ?? "kokan-nikki <noreply@example.invalid>",
-          subject: `Sign in to ${host}`,
-          text: `${host} に サインイン するには、以下のリンクを ふんで ね ♡\n\n${link}\n\n10 ふんで きえるよ。`,
-          html: `<p>${host} に サインイン するには、以下のリンクを ふんで ね ♡</p><p><a href="${link}">${link}</a></p><p>10 ふんで きえるよ。</p>`,
-          kind: "verification",
-        });
-      },
-    }),
-  ],
+  providers,
   pages: {
     signIn: "/auth/signin",
     verifyRequest: "/auth/verify",

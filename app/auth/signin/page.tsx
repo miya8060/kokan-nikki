@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { requestSignIn } from "@/app/_actions/auth";
+import { requestSignIn, signInWithOAuth } from "@/app/_actions/auth";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
-import { auth } from "@/lib/auth";
+import { auth, oauthProviders } from "@/lib/auth";
 import { pickInternalCallbackUrl } from "@/lib/safe-redirect";
 
 type SignInPageProps = {
@@ -50,6 +50,53 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             <PuffButton type="submit">♡ リンクを おくる</PuffButton>
           </div>
         </form>
+
+        {(oauthProviders.google || oauthProviders.line) && (
+          <>
+            <div className="text-ink-soft mt-8 flex items-center gap-3 text-xs tracking-wider uppercase">
+              <span className="bg-ink-soft/30 h-px flex-1" />
+              <span>または</span>
+              <span className="bg-ink-soft/30 h-px flex-1" />
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              {oauthProviders.google && (
+                <form action={signInWithOAuth}>
+                  <input type="hidden" name="provider" value="google" />
+                  <input
+                    type="hidden"
+                    name="redirectTo"
+                    value={redirectTo}
+                  />
+                  <PuffButton
+                    type="submit"
+                    variant="alt"
+                    className="w-full"
+                  >
+                    ♡ Google で さいんいん
+                  </PuffButton>
+                </form>
+              )}
+              {oauthProviders.line && (
+                <form action={signInWithOAuth}>
+                  <input type="hidden" name="provider" value="line" />
+                  <input
+                    type="hidden"
+                    name="redirectTo"
+                    value={redirectTo}
+                  />
+                  <PuffButton
+                    type="submit"
+                    variant="alt"
+                    className="w-full"
+                  >
+                    ♡ LINE で さいんいん
+                  </PuffButton>
+                </form>
+              )}
+            </div>
+          </>
+        )}
       </Sticker>
     </main>
   );
