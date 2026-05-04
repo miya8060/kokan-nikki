@@ -4,12 +4,17 @@ import { Tag } from "@/components/ui/Tag";
 export default function VerifyPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-24">
-      <Sticker tape className="w-full max-w-md p-10 text-center">
-        <Tag style={{ background: "var(--lemon)" }}>★ check your inbox</Tag>
-        <h1 className="text-ink mt-4 font-[family-name:var(--font-mochi)] text-3xl">
+      <Sticker tape className="w-full max-w-md p-10 text-center sm:p-12">
+        <Tag
+          className="px-4 py-1.5 text-sm"
+          style={{ background: "var(--lemon)" }}
+        >
+          ★ check your inbox
+        </Tag>
+        <h1 className="text-ink mt-4 font-[family-name:var(--font-mochi)] text-3xl sm:text-4xl">
           めーる おくった！
         </h1>
-        <p className="text-ink-soft mt-3 text-sm leading-7">
+        <p className="text-ink-soft mt-3 text-sm leading-7 sm:text-base sm:leading-8">
           いま送った リンクを ふんで ね。
           <br />
           ブラウザを そのまま 開いて おいて だいじょうぶ。

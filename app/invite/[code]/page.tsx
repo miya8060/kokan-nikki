@@ -56,11 +56,13 @@ function InviteErrorView({ reason }: { reason: InviteErrorReason }) {
   const { title, description } = errorMessages[reason];
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
-      <Sticker className="p-8 text-center">
-        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-2xl">
+      <Sticker className="p-8 text-center sm:p-10">
+        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-2xl sm:text-3xl">
           {title}
         </h1>
-        <p className="text-ink-soft mt-4 text-sm leading-7">{description}</p>
+        <p className="text-ink-soft mt-4 text-sm leading-7 sm:text-base sm:leading-8">
+          {description}
+        </p>
         <div className="mt-6 flex justify-center">
           <PuffButton href="/notebooks" variant="alt">
             ♡ にっき いちらん へ
@@ -142,16 +144,16 @@ export default async function InviteAcceptPage({
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
       <header className="text-center">
-        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl">
+        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl sm:text-4xl">
           ♡ しょうたい とどいた
         </h1>
-        <p className="text-ink-soft mt-2 text-sm">
+        <p className="text-ink-soft mt-2 text-sm sm:text-base">
           {invite.notebook.name} に さんか しますか?
         </p>
       </header>
 
-      <Sticker tape className="p-8">
-        <p className="text-ink-soft text-sm leading-7">
+      <Sticker tape className="p-8 sm:p-10">
+        <p className="text-ink-soft text-sm leading-7 sm:text-base sm:leading-8">
           このノートには いま {invite.notebook._count.members} にんが
           さんかちゅう。
           <br />

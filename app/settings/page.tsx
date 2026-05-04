@@ -65,16 +65,16 @@ export default async function SettingsPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
       <header className="text-center">
-        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl">
+        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl sm:text-4xl">
           ⚙ せってい
         </h1>
-        <p className="text-ink-soft mt-2 text-sm">
+        <p className="text-ink-soft mt-2 text-sm sm:text-base">
           みための こうかん と カーソル を きりかえる ♡
         </p>
       </header>
 
-      <Sticker tape className="p-8">
-        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
+      <Sticker tape className="p-8 sm:p-10">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
           ☆ ひょうじめい
         </h2>
         <p className="text-ink-soft mt-1 text-xs">
@@ -106,8 +106,8 @@ export default async function SettingsPage() {
         </form>
       </Sticker>
 
-      <Sticker tape className="p-8">
-        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
+      <Sticker tape className="p-8 sm:p-10">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
           ☆ アイコン
         </h2>
         <p className="text-ink-soft mt-1 text-xs">
@@ -153,8 +153,8 @@ export default async function SettingsPage() {
         <IconUploadForm uploadEnabled={uploadEnabled} />
       </Sticker>
 
-      <Sticker tape className="p-8">
-        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
+      <Sticker tape className="p-8 sm:p-10">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
           ★ パレット
         </h2>
         <p className="text-ink-soft mt-1 text-xs">
@@ -179,8 +179,8 @@ export default async function SettingsPage() {
         </form>
       </Sticker>
 
-      <Sticker className="p-8">
-        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
+      <Sticker className="p-8 sm:p-10">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
           ✿ カスタムカーソル
         </h2>
         <p className="text-ink-soft mt-1 text-xs">
