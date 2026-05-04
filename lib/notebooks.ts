@@ -38,8 +38,13 @@ export type NotebookDetail = {
   viewerLastNudgeAt: Date | null;
 };
 
-function displayNameOf(user: { name: string | null; email: string }): string {
-  return user.name ?? user.email;
+// F-AUTH-05: User.email は nullable (X 等 email を返さない OAuth provider 用)
+// なので displayName fallback では email に頼らず、name 未設定なら placeholder
+// を返す。OAuth provider はデフォルトで profile.name を User.name に書き込む
+// ので、実用上 fallback に落ちるのは onboarding 名前入力前か X user で name
+// も無いごく稀なケースのみ。
+function displayNameOf(user: { name: string | null }): string {
+  return user.name ?? "ななしさん";
 }
 
 export async function getNotebookDetail(
@@ -56,7 +61,7 @@ export async function getNotebookDetail(
         select: {
           userId: true,
           orderIndex: true,
-          user: { select: { name: true, email: true, image: true } },
+          user: { select: { name: true, image: true } },
         },
       },
       entries: {
@@ -71,7 +76,7 @@ export async function getNotebookDetail(
           body: true,
           createdAt: true,
           authorId: true,
-          author: { select: { name: true, email: true, image: true } },
+          author: { select: { name: true, image: true } },
         },
       },
     },

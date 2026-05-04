@@ -6,7 +6,7 @@ import type { User } from "@prisma/client";
 // session that auth() will return for that test case.
 
 type SessionShape = {
-  user: { id: string; email: string; name?: string | null };
+  user: { id: string; email?: string | null; name?: string | null };
   expires: string;
 } | null;
 

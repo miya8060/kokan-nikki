@@ -116,8 +116,15 @@ export async function GET(req: Request): Promise<Response> {
       skipped.push({ notebookId: nb.id, reason: "no-user" });
       continue;
     }
+    // F-AUTH-05: email を持たない user (X など email を返さない OAuth 経由
+    // で作られた user) は宛先がないので silent skip。手動ナッジ通知 (#45)
+    // で別経路を作ったときに、ここではなくその経路でケアする方針。
+    if (!toUser.email) {
+      skipped.push({ notebookId: nb.id, reason: "no-email" });
+      continue;
+    }
     const { subject, text } = buildNudgeEmail({
-      toName: toUser.name ?? toUser.email,
+      toName: toUser.name ?? "ななしさん",
       notebookName: nb.name,
       notebookId: nb.id,
     });
