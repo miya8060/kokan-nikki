@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { requestSignIn, signInWithOAuth } from "@/app/_actions/auth";
@@ -92,6 +93,24 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             </div>
           </>
         )}
+
+        <p className="text-ink-soft mt-8 text-center text-xs leading-6">
+          サインインすると{" "}
+          <Link
+            href="/legal/terms"
+            className="text-pink-2 underline underline-offset-4"
+          >
+            利用規約
+          </Link>{" "}
+          と{" "}
+          <Link
+            href="/legal/privacy"
+            className="text-pink-2 underline underline-offset-4"
+          >
+            プライバシーポリシー
+          </Link>{" "}
+          に同意したものとみなされます。
+        </p>
       </Sticker>
     </main>
   );
