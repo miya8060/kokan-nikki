@@ -20,19 +20,19 @@ export default async function Home() {
         items={[
           <span
             key="a"
-            className="font-[family-name:var(--font-mochi)] text-4xl"
+            className="font-[family-name:var(--font-mochi)] text-5xl"
           >
             DREAMY ♡ PIXEL
           </span>,
           <span
             key="b"
-            className="text-pink-2 font-[family-name:var(--font-mochi)] text-4xl"
+            className="text-pink-2 font-[family-name:var(--font-mochi)] text-5xl"
           >
             こうかん にっき
           </span>,
           <span
             key="c"
-            className="text-mint font-[family-name:var(--font-mochi)] text-4xl"
+            className="text-mint font-[family-name:var(--font-mochi)] text-5xl"
           >
             ♡ kawaii broadcast ♡
           </span>,
@@ -41,7 +41,7 @@ export default async function Home() {
         className="mt-10"
       />
 
-      <main className="relative flex flex-1 items-center justify-center px-6 py-32">
+      <main className="relative flex flex-1 items-center justify-center px-6 pt-12 pb-24">
         <FloatingCutie kind="heart" x="8%" y="20%" size={120} rotate={-12} />
         <FloatingCutie
           kind="star"

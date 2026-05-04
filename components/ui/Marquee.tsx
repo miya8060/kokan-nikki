@@ -36,7 +36,7 @@ export function Marquee({
       style={sectionStyle}
     >
       <div className="marquee" style={stripStyle}>
-        <div className="flex min-w-max items-center gap-9 py-[18px]">
+        <div className="flex min-w-max items-center gap-9 py-[28px]">
           {content.map((node, i) => (
             <span key={i} className="inline-flex items-center gap-4">
               {node}
