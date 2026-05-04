@@ -20,33 +20,34 @@ export default async function Home() {
         items={[
           <span
             key="a"
-            className="font-[family-name:var(--font-mochi)] text-3xl"
+            className="font-[family-name:var(--font-mochi)] text-4xl"
           >
             DREAMY ♡ PIXEL
           </span>,
           <span
             key="b"
-            className="text-pink-2 font-[family-name:var(--font-mochi)] text-3xl"
+            className="text-pink-2 font-[family-name:var(--font-mochi)] text-4xl"
           >
             こうかん にっき
           </span>,
           <span
             key="c"
-            className="text-mint font-[family-name:var(--font-mochi)] text-3xl"
+            className="text-mint font-[family-name:var(--font-mochi)] text-4xl"
           >
             ♡ kawaii broadcast ♡
           </span>,
         ]}
         bg="#fff"
+        className="mt-10"
       />
 
       <main className="relative flex flex-1 items-center justify-center px-6 py-32">
-        <FloatingCutie kind="heart" x="8%" y="20%" size={90} rotate={-12} />
+        <FloatingCutie kind="heart" x="8%" y="20%" size={120} rotate={-12} />
         <FloatingCutie
           kind="star"
           x="86%"
           y="18%"
-          size={80}
+          size={110}
           rotate={14}
           delay="0.6s"
           color="var(--lemon)"
@@ -55,40 +56,56 @@ export default async function Home() {
           kind="bow"
           x="12%"
           y="74%"
-          size={100}
+          size={130}
           rotate={8}
           delay="0.3s"
         />
 
-        <Sticker tape className="relative max-w-md p-10 text-center">
-          <Sparkle style={{ top: 20, right: 20 }} delay={0} />
-          <Sparkle style={{ bottom: 24, left: 24 }} delay={1} />
+        <Sticker tape className="relative max-w-xl p-14 text-center">
+          <Sparkle style={{ top: 24, right: 24 }} delay={0} />
+          <Sparkle style={{ bottom: 28, left: 28 }} delay={1} />
 
-          <p className="text-ink-soft font-[family-name:var(--font-pixel)] text-xs tracking-wider uppercase">
+          <p className="text-ink-soft font-[family-name:var(--font-pixel)] text-sm tracking-wider uppercase">
             kokan-nikki
           </p>
-          <h1 className="text-ink mt-3 font-[family-name:var(--font-mochi)] text-4xl">
+          <h1 className="text-ink mt-4 font-[family-name:var(--font-mochi)] text-5xl">
             こうかん にっき
           </h1>
-          <p className="text-pink-2 mt-4 font-[family-name:var(--font-hand)] text-2xl">
+          <p className="text-pink-2 mt-5 font-[family-name:var(--font-hand)] text-3xl">
             dreamy pixel ♡
           </p>
 
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            <Tag>♡ cute</Tag>
-            <Tag style={{ background: "var(--lemon)" }}>★ is</Tag>
-            <Tag style={{ background: "var(--mint-2)" }}>✿ justice</Tag>
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <Tag className="px-4 py-1.5 text-sm">♡ cute</Tag>
+            <Tag
+              className="px-4 py-1.5 text-sm"
+              style={{ background: "var(--lemon)" }}
+            >
+              ★ is
+            </Tag>
+            <Tag
+              className="px-4 py-1.5 text-sm"
+              style={{ background: "var(--mint-2)" }}
+            >
+              ✿ justice
+            </Tag>
           </div>
 
-          <p className="text-ink-soft mt-6 text-sm leading-7">
+          <p className="text-ink-soft mt-7 text-base leading-7">
             きょうの きもちを、ともだちと そっと わけあう。
             <br />
             まずは おなまえを おしえてね ♡
           </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <PuffButton href="/auth/signin">♡ あそびに いく</PuffButton>
-            <PuffButton variant="alt" href="/notebooks">
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <PuffButton className="px-9 py-5 text-base" href="/auth/signin">
+              ♡ あそびに いく
+            </PuffButton>
+            <PuffButton
+              className="px-9 py-5 text-base"
+              variant="alt"
+              href="/notebooks"
+            >
               ★ にっき よむ
             </PuffButton>
           </div>
