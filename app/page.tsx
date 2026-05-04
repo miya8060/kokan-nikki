@@ -61,14 +61,14 @@ export default async function Home() {
           delay="0.3s"
         />
 
-        <Sticker tape className="relative max-w-xl p-14 text-center">
+        <Sticker tape className="relative max-w-xl p-8 text-center sm:p-14">
           <Sparkle style={{ top: 24, right: 24 }} delay={0} />
           <Sparkle style={{ bottom: 28, left: 28 }} delay={1} />
 
           <p className="text-ink-soft font-[family-name:var(--font-pixel)] text-sm tracking-wider uppercase">
             kokan-nikki
           </p>
-          <h1 className="text-ink mt-4 font-[family-name:var(--font-mochi)] text-5xl">
+          <h1 className="text-ink mt-4 font-[family-name:var(--font-mochi)] text-4xl whitespace-nowrap sm:text-5xl">
             こうかん にっき
           </h1>
           <p className="text-pink-2 mt-5 font-[family-name:var(--font-hand)] text-3xl">
