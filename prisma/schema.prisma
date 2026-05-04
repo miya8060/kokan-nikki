@@ -34,6 +34,7 @@ model User {
   entries     Entry[]
   nudgesSent  Nudge[]          @relation("NudgeFrom")
   nudgesRcvd  Nudge[]          @relation("NudgeTo")
+  mergesIn    UserMergeLog[]
 }
 
 model Account {
@@ -137,4 +138,23 @@ model Nudge {
   toUser   User     @relation("NudgeTo", fields: [toUserId], references: [id])
 
   @@index([notebookId, toUserId, createdAt])
+}
+
+// F-AUTH-06 / issue #68: User merge の監査ログ。merge 後 User#B は削除される
+// ため、fromUserId は外部 FK を張らない素の string で残し、CS 対応や法令系の
+// 「ある時点でこの user_id がどこへ吸収されたか」問合せに永続的に答えられる
+// ようにする。to 側は生存している User なので FK を維持。
+model UserMergeLog {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  // dedup / abort 等の判断材料を JSON で残す (移動した row 数、Account
+  // 競合の有無、provider など)。
+  summary    Json
+  executedAt DateTime @default(now())
+
+  toUser User @relation(fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId, executedAt])
+  @@index([fromUserId])
 }

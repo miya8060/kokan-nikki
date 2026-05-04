@@ -30,6 +30,7 @@ beforeEach(async () => {
   // ever switches off cuid().
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE
+       "UserMergeLog",
        "Nudge",
        "Invite",
        "Entry",
