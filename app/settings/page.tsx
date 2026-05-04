@@ -2,13 +2,15 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { startLinkAccount } from "@/app/_actions/link-account";
 import { setDisplayName, setIcon } from "@/app/_actions/profile";
 import { setCursor, setPalette } from "@/app/_actions/settings";
 import { IconUploadForm } from "@/app/settings/IconUploadForm";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { UserAvatar } from "@/components/ui/UserAvatar";
-import { auth } from "@/lib/auth";
+import { auth, oauthProviders } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import {
   ICON_PRESET_KEYS,
   ICON_PRESET_LABELS,
@@ -33,14 +35,48 @@ import { DISPLAY_NAME_MAX } from "@/lib/schemas/user";
 // F-USER-01: 表示名 (User.name) もここから編集できる。初回設定は
 // /onboarding/name 経由なので、このページに辿り着いた時点で name は設定済み。
 
-export default async function SettingsPage() {
+const LINK_STATUS_LABELS: Record<string, string> = {
+  merged: "♡ X アカウントを 統合 したよ",
+  already: "もう 連携済 だった",
+  cancelled: "連携を やめたよ",
+  expired: "連携の しくみが 切れたよ。もう一度 やってね",
+  error: "エラーが おきたよ。もう一度 ためしてね",
+  "merge-account-conflict":
+    "別の 連携と ぶつかったので 統合できなかった。先に X 連携を 解除してから やってね",
+  "merge-self-merge": "自分を 自分に 統合する ことは できない",
+  "merge-missing-user": "対象の アカウントが もう 見つからない",
+};
+
+function pickLinkStatus(value: string | string[] | undefined): string | null {
+  const v = Array.isArray(value) ? value[0] : value;
+  if (typeof v !== "string") return null;
+  return Object.prototype.hasOwnProperty.call(LINK_STATUS_LABELS, v) ? v : null;
+}
+
+type SettingsPageProps = {
+  searchParams?: Promise<{ link?: string | string[] }>;
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: SettingsPageProps) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect("/auth/signin?callbackUrl=/settings");
   }
   if (!session.user.name || session.user.name.trim().length === 0) {
     redirect("/onboarding/name?callbackUrl=/settings");
   }
+
+  const params = (await searchParams) ?? {};
+  const linkStatus = pickLinkStatus(params.link);
+  const linkStatusLabel = linkStatus ? LINK_STATUS_LABELS[linkStatus] : null;
+
+  const linkedAccounts = await prisma.account.findMany({
+    where: { userId: session.user.id },
+    select: { provider: true },
+  });
+  const linkedProviders = new Set(linkedAccounts.map((a) => a.provider));
 
   const cookieStore = await cookies();
   const currentPalette = parsePalette(cookieStore.get(PALETTE_COOKIE)?.value);
@@ -72,6 +108,16 @@ export default async function SettingsPage() {
           みための こうかん と カーソル を きりかえる ♡
         </p>
       </header>
+
+      {linkStatusLabel && (
+        <p
+          className="text-ink border-ink rounded-2xl border-2 bg-white px-4 py-3 text-center text-sm shadow-[0_3px_0_var(--ink)]"
+          data-testid="link-status"
+          data-link-status={linkStatus}
+        >
+          {linkStatusLabel}
+        </p>
+      )}
 
       <Sticker tape className="p-8 sm:p-10">
         <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
@@ -178,6 +224,34 @@ export default async function SettingsPage() {
           </div>
         </form>
       </Sticker>
+
+      {oauthProviders.twitter && !linkedProviders.has("twitter") && (
+        <Sticker tape className="p-8 sm:p-10">
+          <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
+            ☆ ほかの サインイン方法 を つなぐ
+          </h2>
+          <p className="text-ink-soft mt-1 text-xs">
+            X アカウントを 連携 して ふくすうの 方法で さいんいん できる ように
+            する。
+          </p>
+          <form
+            action={startLinkAccount}
+            className="mt-5 flex flex-col gap-4"
+            data-testid="link-twitter-form"
+          >
+            <input type="hidden" name="provider" value="twitter" />
+            <div className="flex justify-center">
+              <PuffButton
+                type="submit"
+                variant="alt"
+                data-testid="link-twitter-start"
+              >
+                ♡ X を 連携 する
+              </PuffButton>
+            </div>
+          </form>
+        </Sticker>
+      )}
 
       <Sticker className="p-8 sm:p-10">
         <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">

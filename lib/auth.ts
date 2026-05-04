@@ -5,6 +5,7 @@ import Line from "next-auth/providers/line";
 import Resend from "next-auth/providers/resend";
 import Twitter from "next-auth/providers/twitter";
 
+import { handleTwitterLinkSignIn } from "@/lib/auth/link-callback";
 import { sendMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 import { wrapCallbackUrl } from "@/lib/safe-redirect";
@@ -105,5 +106,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/auth/signin",
     verifyRequest: "/auth/verify",
+  },
+  callbacks: {
+    // F-AUTH-06 / issue #68 Stage 2
+    // X (twitter) provider の linking flow は別モジュールに切り出してある。
+    // 他 provider は通常通り pass-through。
+    async signIn({ account }) {
+      if (!account || account.provider !== "twitter") return true;
+      return handleTwitterLinkSignIn(account);
+    },
   },
 });
