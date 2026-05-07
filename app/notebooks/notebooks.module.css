@@ -32,6 +32,10 @@
 
   position: relative;
   z-index: 1;
+  /* body は flex-col + align-items: normal (= stretch) なので width: 100% を
+     明示しないと auto margin が intrinsic width に潰す。max-width で 980 に
+     クランプし auto margin で中央寄せ。 */
+  width: 100%;
   max-width: 980px;
   margin: 0 auto;
   padding: 36px 28px 120px;
