@@ -19,6 +19,7 @@ import {
   pickStickers,
   pickTapeStripe,
 } from "@/app/notebooks/_lib/cover";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getNextTurnUserId } from "@/lib/turn";
@@ -81,15 +82,20 @@ export default async function NotebooksPage() {
 
       const isYourTurn = nextTurnUserId === userId;
       let nextTurnLabel: string;
+      let nextTurnImage: string | null = null;
+      let nextTurnDisplayName = "";
       if (isYourTurn) {
         nextTurnLabel = "あなた ♡";
       } else if (nextTurnUserId) {
         const next = await prisma.user.findUnique({
           where: { id: nextTurnUserId },
-          select: { name: true },
+          select: { name: true, image: true },
         });
         // F-AUTH-05: name 未設定 user (X 経由 + onboarding 未完了) の placeholder。
-        nextTurnLabel = `${next?.name ?? "ななしさん"} のばん`;
+        const displayName = next?.name ?? "ななしさん";
+        nextTurnLabel = `${displayName} のばん`;
+        nextTurnImage = next?.image ?? null;
+        nextTurnDisplayName = displayName;
       } else {
         nextTurnLabel = "—";
       }
@@ -102,6 +108,8 @@ export default async function NotebooksPage() {
         preview: buildPreview(lastEntry?.body),
         partnerLabel,
         nextTurnLabel,
+        nextTurnImage,
+        nextTurnDisplayName,
         isYourTurn,
         isNew: isFreshNotebook(notebook.createdAt),
       };
@@ -295,10 +303,18 @@ export default async function NotebooksPage() {
                               : styles.turnChipThem
                           }`}
                         >
-                          <span
-                            className={styles.turnChipAv}
-                            aria-hidden="true"
-                          />
+                          {item.isYourTurn ? (
+                            <span
+                              className={styles.turnChipAv}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <UserAvatar
+                              imageValue={item.nextTurnImage}
+                              displayName={item.nextTurnDisplayName}
+                              size="xs"
+                            />
+                          )}
                           {item.nextTurnLabel}
                           {item.isYourTurn && (
                             <span

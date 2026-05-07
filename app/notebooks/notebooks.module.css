@@ -619,7 +619,6 @@
   display: inline-block;
 }
 .turnChipYou .turnChipAv { background: var(--accent-pink); }
-.turnChipThem .turnChipAv { background: var(--accent-blue); }
 .turnChipPulse {
   width: 8px;
   height: 8px;
