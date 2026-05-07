@@ -79,6 +79,12 @@ model VerificationToken {
 model Notebook {
   id          String   @id @default(cuid())
   name        String
+  // F-NB issue #90: composer で選んだ表紙色を保存する。値は
+  // notebookColorSchema (lib/schemas/notebook.ts) で固定 6 色に絞る。
+  // 既存 row (#90 以前に作られた notebook) は NULL のままにし、表示時に
+  // id ハッシュ fallback で従前と同じ色を返す。新規 row は composer 側で
+  // 必ず色を送るので、運用上は常に non-null になる前提。
+  color       String?
   createdById String
   createdAt   DateTime @default(now())
 

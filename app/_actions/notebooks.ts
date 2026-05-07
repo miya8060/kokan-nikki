@@ -8,7 +8,7 @@ import { CreateNotebookError, PostEntryError } from "@/app/_actions/errors";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { entryBodySchema, entryTitleSchema } from "@/lib/schemas/entry";
-import { notebookNameSchema } from "@/lib/schemas/notebook";
+import { notebookColorSchema, notebookNameSchema } from "@/lib/schemas/notebook";
 import { isUsersTurn } from "@/lib/turn";
 
 // Next 16 の "use server" 制約: このファイルからは async 関数しか export できない。
@@ -17,6 +17,7 @@ import { isUsersTurn } from "@/lib/turn";
 
 const createNotebookInputSchema = z.object({
   name: notebookNameSchema,
+  color: notebookColorSchema,
 });
 
 type CreateNotebookInput = z.infer<typeof createNotebookInputSchema>;
@@ -34,7 +35,7 @@ export async function createNotebook(
   if (!parsed.success) {
     throw new CreateNotebookError("invalid-input");
   }
-  const { name } = parsed.data;
+  const { name, color } = parsed.data;
 
   // F-NB-03: 作成者を orderIndex=0 のメンバーとして同時に登録する。
   // nested write で 1 トランザクションに包むことで、Notebook だけ生成されて
@@ -42,6 +43,7 @@ export async function createNotebook(
   const notebook = await prisma.notebook.create({
     data: {
       name,
+      color,
       createdById: userId,
       members: {
         create: { userId, orderIndex: 0 },
@@ -59,8 +61,13 @@ export async function createNotebook(
 export async function createNotebookFromForm(
   formData: FormData,
 ): Promise<void> {
-  const raw = formData.get("name");
-  await createNotebook({ name: typeof raw === "string" ? raw : "" });
+  const rawName = formData.get("name");
+  const rawColor = formData.get("color");
+  await createNotebook({
+    name: typeof rawName === "string" ? rawName : "",
+    // 未知 / 欠損 color は zod 側で invalid-input として弾かせる。
+    color: rawColor as never,
+  });
   revalidatePath("/notebooks");
   redirect("/notebooks");
 }
