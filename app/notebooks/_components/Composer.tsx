@@ -3,7 +3,7 @@
 import { type SyntheticEvent, useRef, useState, useTransition } from "react";
 
 import { createNotebookFromForm } from "@/app/_actions/notebooks";
-import { COVER_PALETTES } from "@/app/notebooks/_lib/cover";
+import { COVER_PALETTES, type CoverPaletteId } from "@/app/notebooks/_lib/cover";
 import { NOTEBOOK_NAME_MAX } from "@/lib/schemas/notebook";
 
 import styles from "../notebooks.module.css";
@@ -56,9 +56,9 @@ function isReduceMotion() {
 }
 
 export function Composer() {
-  // 色は DB に保存しないが、押した感触を出すためローカル state で管理する。
-  // 表紙の色は server 側で id ハッシュから決まるため、選択結果は使われない。
-  const [pickedColor, setPickedColor] = useState<string>("pink");
+  // pickedColor は hidden input 経由で createNotebookFromForm に渡し、
+  // Notebook.color に保存される。COVER_PALETTES の id と 1:1。
+  const [pickedColor, setPickedColor] = useState<CoverPaletteId>("pink");
   const buttonAreaRef = useRef<HTMLDivElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, startTransition] = useTransition();
@@ -117,6 +117,7 @@ export function Composer() {
           placeholder="ひみつ こうかんにっき"
           className={styles.input}
         />
+        <input type="hidden" name="color" value={pickedColor} />
 
         <div className={styles.composerFoot}>
           <div className={styles.coverPicker}>

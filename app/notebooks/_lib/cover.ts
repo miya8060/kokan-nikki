@@ -1,6 +1,7 @@
-// notebook id ハッシュから cover palette / マステ / シール配置を決め打ちする。
-// DB に色を持たせない方針 (引き継ぎ仕様) のため、id だけで決まる pure function に
-// する。同じ notebook には常に同じ表紙が出る。
+// notebook の表紙色 / マステ / シール配置を決める。
+// 表紙色は #90 で DB の Notebook.color を 1st choice にし、未指定 (古い row)
+// だけ id ハッシュ fallback で従前の挙動を維持する。マステ / シールは
+// 引き続き id ハッシュ決定 (DB に持つ意味が薄いため)。
 
 export const COVER_PALETTES = [
   { id: "pink", c1: "#ffb1d4", c2: "#ff6fa3", tape: "var(--tape-mint)", tapeR: "-8deg" },
@@ -12,6 +13,7 @@ export const COVER_PALETTES = [
 ] as const;
 
 export type CoverPalette = (typeof COVER_PALETTES)[number];
+export type CoverPaletteId = CoverPalette["id"];
 
 export type StickerKind =
   | "star"
@@ -43,7 +45,16 @@ function hashId(id: string): number {
   return h;
 }
 
-export function pickCoverPalette(id: string): CoverPalette {
+// DB の Notebook.color を優先し、未指定 / 未知の値は id ハッシュ fallback。
+// 不正値 (typo / 旧値) は警告なしで fallback して表示崩れを避ける。
+export function pickCoverPalette(
+  id: string,
+  color?: string | null,
+): CoverPalette {
+  if (color) {
+    const matched = COVER_PALETTES.find((p) => p.id === color);
+    if (matched) return matched;
+  }
   return COVER_PALETTES[hashId(id) % COVER_PALETTES.length];
 }
 

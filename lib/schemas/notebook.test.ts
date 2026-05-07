@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { NOTEBOOK_NAME_MAX, notebookNameSchema } from "./notebook";
+import {
+  NOTEBOOK_COLORS,
+  NOTEBOOK_NAME_MAX,
+  notebookColorSchema,
+  notebookNameSchema,
+} from "./notebook";
 
 // testing.md §4.1 — F-NB-01 の名前バリデーションを zod 単体で確認。
 // 上限は実装側で決めた 80 文字なので、その境界値も併せて押さえる。
@@ -42,5 +47,27 @@ describe("notebookNameSchema (F-NB-01 境界値)", () => {
     expect(notebookNameSchema.safeParse("foo\nbar").success).toBe(false);
     expect(notebookNameSchema.safeParse("foo\r\nbar").success).toBe(false);
     expect(notebookNameSchema.safeParse("foo\rbar").success).toBe(false);
+  });
+});
+
+// issue #90: 表紙色は固定 6 色に絞る。COVER_PALETTES (app/notebooks/_lib/cover)
+// と並走しているので、両者の id がズレないことを担保するためここで列挙を
+// チェックしておく。
+describe("notebookColorSchema (#90 表紙色)", () => {
+  it.each(NOTEBOOK_COLORS)("%s は受理される", (color) => {
+    expect(notebookColorSchema.safeParse(color).success).toBe(true);
+  });
+
+  it("空文字は拒否される", () => {
+    expect(notebookColorSchema.safeParse("").success).toBe(false);
+  });
+
+  it("未知の色 (typo / 旧値) は拒否される", () => {
+    expect(notebookColorSchema.safeParse("rainbow").success).toBe(false);
+  });
+
+  it("null / undefined は拒否される", () => {
+    expect(notebookColorSchema.safeParse(null).success).toBe(false);
+    expect(notebookColorSchema.safeParse(undefined).success).toBe(false);
   });
 });

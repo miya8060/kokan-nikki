@@ -23,7 +23,7 @@ describe("createNotebook (F-NB-01 / F-NB-03)", () => {
     const owner = await makeUser(prisma);
     setMockSession(owner);
 
-    const result = await createNotebook({ name: "ひみつにっき" });
+    const result = await createNotebook({ name: "ひみつにっき", color: "pink" });
 
     expect(result.notebookId).toEqual(expect.any(String));
 
@@ -47,7 +47,7 @@ describe("createNotebook (F-NB-01 / F-NB-03)", () => {
     const owner = await makeUser(prisma);
     setMockSession(owner);
 
-    const result = await createNotebook({ name: "  わくわく  " });
+    const result = await createNotebook({ name: "  わくわく  ", color: "pink" });
     const stored = await prisma.notebook.findUnique({
       where: { id: result.notebookId },
     });
@@ -58,10 +58,12 @@ describe("createNotebook (F-NB-01 / F-NB-03)", () => {
     const prisma = getPrisma();
     // setMockSession を呼ばないので auth() は null。
 
-    await expect(createNotebook({ name: "anon" })).rejects.toBeInstanceOf(
-      CreateNotebookError,
-    );
-    await expect(createNotebook({ name: "anon" })).rejects.toMatchObject({
+    await expect(
+      createNotebook({ name: "anon", color: "pink" }),
+    ).rejects.toBeInstanceOf(CreateNotebookError);
+    await expect(
+      createNotebook({ name: "anon", color: "pink" }),
+    ).rejects.toMatchObject({
       reason: "unauthenticated",
     });
 
@@ -73,11 +75,43 @@ describe("createNotebook (F-NB-01 / F-NB-03)", () => {
     const owner = await makeUser(prisma);
     setMockSession(owner);
 
-    await expect(createNotebook({ name: "   " })).rejects.toMatchObject({
+    await expect(
+      createNotebook({ name: "   ", color: "pink" }),
+    ).rejects.toMatchObject({
       name: "CreateNotebookError",
       reason: "invalid-input",
     });
 
+    expect(await prisma.notebook.count()).toBe(0);
+  });
+
+  // issue #90: composer の swatch で選んだ色が DB に保存される。
+  it("選んだ color が Notebook.color に保存される", async () => {
+    const prisma = getPrisma();
+    const owner = await makeUser(prisma);
+    setMockSession(owner);
+
+    const result = await createNotebook({ name: "lilac diary", color: "lilac" });
+    const stored = await prisma.notebook.findUnique({
+      where: { id: result.notebookId },
+      select: { color: true },
+    });
+    expect(stored?.color).toBe("lilac");
+  });
+
+  it("未知の color は invalid-input で拒否される", async () => {
+    const prisma = getPrisma();
+    const owner = await makeUser(prisma);
+    setMockSession(owner);
+
+    await expect(
+      // 6 色に無い値 (typo / 旧値) は zod 側で弾く。
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      createNotebook({ name: "x", color: "rainbow" as any }),
+    ).rejects.toMatchObject({
+      name: "CreateNotebookError",
+      reason: "invalid-input",
+    });
     expect(await prisma.notebook.count()).toBe(0);
   });
 });

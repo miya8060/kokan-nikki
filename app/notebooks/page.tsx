@@ -51,6 +51,7 @@ export default async function NotebooksPage() {
         select: {
           id: true,
           name: true,
+          color: true,
           createdAt: true,
           entries: {
             select: { createdAt: true, body: true },
@@ -103,6 +104,7 @@ export default async function NotebooksPage() {
       return {
         id: notebook.id,
         name: notebook.name,
+        color: notebook.color,
         serialNo: index + 1,
         lastUpdatedAt,
         preview: buildPreview(lastEntry?.body),
@@ -201,7 +203,7 @@ export default async function NotebooksPage() {
 
           <ul className={styles.cards}>
             {items.map((item) => {
-              const palette = pickCoverPalette(item.id);
+              const palette = pickCoverPalette(item.id, item.color);
               const tapeStripe = pickTapeStripe(item.id);
               const stickers = pickStickers(item.id);
               return (
