@@ -3,6 +3,7 @@ import {
   Caveat,
   DotGothic16,
   Mochiy_Pop_One,
+  Yusei_Magic,
   Zen_Maru_Gothic,
 } from "next/font/google";
 import { cookies } from "next/headers";
@@ -39,6 +40,14 @@ const maru = Zen_Maru_Gothic({
 
 const pixel = DotGothic16({
   variable: "--font-pixel",
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+const yusei = Yusei_Magic({
+  variable: "--font-yusei",
   weight: "400",
   subsets: ["latin"],
   display: "swap",
@@ -97,6 +106,7 @@ export default async function RootLayout({
         mochi.variable,
         maru.variable,
         pixel.variable,
+        yusei.variable,
         hand.variable,
         "h-full antialiased",
         cursorEnabled && "heart-cursor-on",
