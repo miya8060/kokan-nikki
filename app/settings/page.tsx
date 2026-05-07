@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { startLinkAccount } from "@/app/_actions/link-account";
 import { setDisplayName, setIcon } from "@/app/_actions/profile";
-import { setCursor, setPalette } from "@/app/_actions/settings";
+import { setCursor, setPalette, setTweak } from "@/app/_actions/settings";
 import { IconUploadForm } from "@/app/settings/IconUploadForm";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
@@ -23,9 +23,14 @@ import {
   PALETTE_COOKIE,
   PALETTE_KEYS,
   PALETTE_LABELS,
+  TWEAK_COOKIES,
+  TWEAK_KEYS,
+  TWEAK_LABELS,
   parseCursorEnabled,
   parsePalette,
+  parseTweak,
   type PaletteKey,
+  type TweakKey,
 } from "@/lib/palette";
 import { DISPLAY_NAME_MAX } from "@/lib/schemas/user";
 
@@ -83,6 +88,12 @@ export default async function SettingsPage({
   const cursorEnabled = parseCursorEnabled(
     cookieStore.get(CURSOR_COOKIE)?.value,
   );
+  const tweaks: Record<TweakKey, boolean> = Object.fromEntries(
+    TWEAK_KEYS.map((key) => [
+      key,
+      parseTweak(key, cookieStore.get(TWEAK_COOKIES[key])?.value),
+    ]),
+  ) as Record<TweakKey, boolean>;
   const currentIcon = parseIconValue(session.user.image ?? null);
   const currentIconKey =
     currentIcon.kind === "preset" ? currentIcon.key : null;
@@ -253,6 +264,23 @@ export default async function SettingsPage({
         </Sticker>
       )}
 
+      <Sticker tape className="p-8 sm:p-10">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
+          ✦ ちょうせつ
+        </h2>
+        <p className="text-ink-soft mt-1 text-xs">
+          にっき いちらん の シール / マステ / ぱきぱき などを きりかえる
+        </p>
+        <ul
+          className="mt-5 flex flex-col gap-3"
+          data-testid="tweaks-list"
+        >
+          {TWEAK_KEYS.map((key) => (
+            <TweakToggle key={key} tweakKey={key} enabled={tweaks[key]} />
+          ))}
+        </ul>
+      </Sticker>
+
       <Sticker className="p-8 sm:p-10">
         <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
           ✿ カスタムカーソル
@@ -330,6 +358,45 @@ function IconOption({
       <UserAvatar imageValue={imageValue} displayName={displayName} size="md" />
       <span className="text-ink text-xs">{label}</span>
     </label>
+  );
+}
+
+function TweakToggle({
+  tweakKey,
+  enabled,
+}: {
+  tweakKey: TweakKey;
+  enabled: boolean;
+}) {
+  // 1 アクションで全 toggle を捌くので、name に key を hidden で同梱。
+  // 現在値の反転を value に持たせると、submit 1 回でトグルが完結し noscript でも動く。
+  const label = TWEAK_LABELS[tweakKey];
+  return (
+    <li
+      data-testid={`tweak-row-${tweakKey}`}
+      data-state={enabled ? "on" : "off"}
+      className="border-ink flex items-start justify-between gap-4 rounded-2xl border-2 bg-white px-4 py-3 shadow-[0_3px_0_var(--ink)]"
+    >
+      <div className="flex flex-1 flex-col gap-1">
+        <span className="text-ink text-sm font-bold">{label.name}</span>
+        <span className="text-ink-soft text-xs">{label.hint}</span>
+      </div>
+      <form
+        action={setTweak}
+        className="flex shrink-0 items-center"
+        data-testid={`tweak-form-${tweakKey}`}
+      >
+        <input type="hidden" name="name" value={tweakKey} />
+        <input type="hidden" name="enabled" value={enabled ? "off" : "on"} />
+        <PuffButton
+          type="submit"
+          variant="alt"
+          data-testid={`tweak-toggle-${tweakKey}`}
+        >
+          {enabled ? "★ ON" : "OFF"}
+        </PuffButton>
+      </form>
+    </li>
   );
 }
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { CardAdd } from "@/app/notebooks/_components/CardAdd";
@@ -21,6 +22,7 @@ import {
 } from "@/app/notebooks/_lib/cover";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { auth } from "@/lib/auth";
+import { TWEAK_COOKIES, parseTweak } from "@/lib/palette";
 import { prisma } from "@/lib/prisma";
 import { getNextTurnUserId } from "@/lib/turn";
 
@@ -38,6 +40,23 @@ export default async function NotebooksPage() {
   if (!session.user?.name || session.user.name.trim().length === 0) {
     redirect("/onboarding/name?callbackUrl=/notebooks");
   }
+
+  // #92: Tweaks panel の cookie を SSR で読み、tape / stickers の描画を gate する。
+  // sparkle は client 側 (Composer) で必要なので prop で渡す。pageFlip は <html>
+  // data 属性側で持ち回り、#91 の overlay が読む想定。
+  const cookieStore = await cookies();
+  const tweaksTape = parseTweak(
+    "tape",
+    cookieStore.get(TWEAK_COOKIES.tape)?.value,
+  );
+  const tweaksStickers = parseTweak(
+    "stickers",
+    cookieStore.get(TWEAK_COOKIES.stickers)?.value,
+  );
+  const tweaksSparkle = parseTweak(
+    "sparkle",
+    cookieStore.get(TWEAK_COOKIES.sparkle)?.value,
+  );
 
   // memberships は user 視点の通し番号 (= joinedAt ASC の配列 index+1) で No.XX
   // タグを出すため、ここでは orderIndex は引かない (notebook 内のメンバー順は
@@ -184,7 +203,7 @@ export default async function NotebooksPage() {
         </span>
       </header>
 
-      <Composer />
+      <Composer sparkleEnabled={tweaksSparkle} />
 
       {items.length === 0 ? (
         <p className={styles.emptyCard}>
@@ -221,18 +240,20 @@ export default async function NotebooksPage() {
                         NEW!
                       </div>
                     )}
-                    <span
-                      className={`${styles.cardTape} ${
-                        tapeStripe ? styles.cardTapeStripe : ""
-                      }`}
-                      style={
-                        {
-                          "--tape-color": palette.tape,
-                          "--tape-r": palette.tapeR,
-                        } as React.CSSProperties
-                      }
-                      aria-hidden="true"
-                    />
+                    {tweaksTape && (
+                      <span
+                        className={`${styles.cardTape} ${
+                          tapeStripe ? styles.cardTapeStripe : ""
+                        }`}
+                        style={
+                          {
+                            "--tape-color": palette.tape,
+                            "--tape-r": palette.tapeR,
+                          } as React.CSSProperties
+                        }
+                        aria-hidden="true"
+                      />
+                    )}
                     <div
                       className={styles.cardCover}
                       style={
@@ -243,30 +264,32 @@ export default async function NotebooksPage() {
                       }
                     >
                       <span className={styles.cardSpine} aria-hidden="true" />
-                      <div
-                        className={styles.cardStickers}
-                        aria-hidden="true"
-                      >
-                        {stickers.map((s, i) => (
-                          <div
-                            key={`${item.id}-st-${i}`}
-                            className={styles.cardSticker}
-                            style={
-                              {
-                                left: s.x,
-                                top: s.y,
-                                "--st-r": `${s.r}deg`,
-                              } as React.CSSProperties
-                            }
-                          >
-                            <StickerByKind
-                              kind={s.kind}
-                              size={s.size}
-                              color={s.color}
-                            />
-                          </div>
-                        ))}
-                      </div>
+                      {tweaksStickers && (
+                        <div
+                          className={styles.cardStickers}
+                          aria-hidden="true"
+                        >
+                          {stickers.map((s, i) => (
+                            <div
+                              key={`${item.id}-st-${i}`}
+                              className={styles.cardSticker}
+                              style={
+                                {
+                                  left: s.x,
+                                  top: s.y,
+                                  "--st-r": `${s.r}deg`,
+                                } as React.CSSProperties
+                              }
+                            >
+                              <StickerByKind
+                                kind={s.kind}
+                                size={s.size}
+                                color={s.color}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div className={styles.coverHead}>
                         <span className={styles.coverTag}>
                           No.{String(item.serialNo).padStart(2, "0")}

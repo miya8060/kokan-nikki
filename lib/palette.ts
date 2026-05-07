@@ -54,3 +54,64 @@ export function parseCursorEnabled(value: string | undefined): boolean {
 export function serializeCursorEnabled(enabled: boolean): "on" | "off" {
   return enabled ? "on" : "off";
 }
+
+// /notebooks の Tweaks panel (#92)。design handoff にある 4 つの ON/OFF を
+// cookie 永続化する。default は handoff デフォルト (sparkle / tape / stickers
+// は ON、page-flip は OFF) に揃え、未設定 cookie の user も handoff 同等の
+// 見た目になるようにする。
+//
+// data-* 属性で <html> に出すため、cookie 値も "on"|"off" の文字列で持つ
+// (palette と同じく SSR 完結 / FOUC 無し)。
+export const TWEAK_KEYS = ["sparkle", "tape", "stickers", "pageFlip"] as const;
+export type TweakKey = (typeof TWEAK_KEYS)[number];
+
+export const TWEAK_COOKIES: Record<TweakKey, string> = {
+  sparkle: "kokan.sparkle",
+  tape: "kokan.tape",
+  stickers: "kokan.stickers",
+  pageFlip: "kokan.page-flip",
+};
+
+export const TWEAK_DEFAULTS: Record<TweakKey, boolean> = {
+  sparkle: true,
+  tape: true,
+  stickers: true,
+  pageFlip: false,
+};
+
+export const TWEAK_LABELS: Record<TweakKey, { name: string; hint: string }> = {
+  sparkle: {
+    name: "✦ つくる ぱきぱき",
+    hint: "「つくる」を おしたとき シールが はじけるよ",
+  },
+  tape: {
+    name: "✿ マステ",
+    hint: "ノートの 上に マスキングテープを はるよ",
+  },
+  stickers: {
+    name: "♡ シール",
+    hint: "表紙に シールを ぺたぺた はるよ",
+  },
+  pageFlip: {
+    name: "★ 見開き ぺーじめくり",
+    hint: "カードを おすと 見開きノートが 開いて めくれるよ",
+  },
+};
+
+// SSR で <html data-...> に出す属性名。data-* は kebab-case にする。
+export const TWEAK_DATA_ATTRS: Record<TweakKey, string> = {
+  sparkle: "data-sparkle",
+  tape: "data-tape",
+  stickers: "data-stickers",
+  pageFlip: "data-page-flip",
+};
+
+export function parseTweak(key: TweakKey, value: string | undefined): boolean {
+  if (value === "on") return true;
+  if (value === "off") return false;
+  return TWEAK_DEFAULTS[key];
+}
+
+export function serializeTweak(enabled: boolean): "on" | "off" {
+  return enabled ? "on" : "off";
+}
