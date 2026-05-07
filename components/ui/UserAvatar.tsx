@@ -10,9 +10,10 @@ import { type IconPresetKey, parseIconValue } from "@/lib/icons/presets";
 // displayName は a11y のラベルにのみ使う (頭文字描画はしない / kawaii 世界観
 // 優先で図形のみ)。
 
-type Size = "sm" | "md";
+type Size = "xs" | "sm" | "md";
 
 const SIZE_PX: Record<Size, number> = {
+  xs: 18,
   sm: 24,
   md: 36,
 };
