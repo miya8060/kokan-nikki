@@ -13,6 +13,14 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
+    ignore:
+      # Prisma 7 requires migrating to a driver adapter (@prisma/adapter-pg),
+      # moving directUrl into prisma.config.ts, and refactoring every
+      # `new PrismaClient(...)` call site. Track major bumps manually.
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
