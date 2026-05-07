@@ -52,10 +52,28 @@ const hand = Caveat({
   display: "swap",
 });
 
+const siteUrl = "https://kokannikki.app";
+const siteTitle = "kokan-nikki ─ こうかん にっき";
+const siteDescription =
+  "Y2K カワイイ系のオンライン交換日記。順番にひとつのノートを回す体験を、離れた場所にいる相手と。";
+
 export const metadata: Metadata = {
-  title: "kokan-nikki ─ こうかん にっき",
-  description:
-    "Y2K カワイイ系のオンライン交換日記。順番にひとつのノートを回す体験を、離れた場所にいる相手と。",
+  metadataBase: new URL(siteUrl),
+  title: siteTitle,
+  description: siteDescription,
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    siteName: "kokan-nikki",
+    locale: "ja_JP",
+    type: "website",
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+  },
 };
 
 export default async function RootLayout({
