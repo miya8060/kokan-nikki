@@ -55,7 +55,13 @@ function isReduceMotion() {
   return document.documentElement.classList.contains("reduce-motion");
 }
 
-export function Composer() {
+export function Composer({
+  sparkleEnabled = true,
+}: {
+  // #92: Tweaks panel の sparkle toggle が OFF のときは burst を出さず、
+  // submit 後の遅延 (BURST_HOLD_MS) も省く。reduced-motion と同等の即時遷移。
+  sparkleEnabled?: boolean;
+}) {
   // pickedColor は hidden input 経由で createNotebookFromForm に渡し、
   // Notebook.color に保存される。COVER_PALETTES の id と 1:1。
   const [pickedColor, setPickedColor] = useState<CoverPaletteId>("pink");
@@ -69,11 +75,11 @@ export function Composer() {
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const reduce = isReduceMotion();
+    const skipBurst = !sparkleEnabled || isReduceMotion();
 
     setIsSubmitting(true);
 
-    if (!reduce) {
+    if (!skipBurst) {
       const node = buttonAreaRef.current;
       if (node) {
         const rect = node.getBoundingClientRect();
@@ -87,7 +93,7 @@ export function Composer() {
       });
     };
 
-    if (reduce) {
+    if (skipBurst) {
       fire();
     } else {
       window.setTimeout(fire, BURST_HOLD_MS);

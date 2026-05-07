@@ -10,7 +10,10 @@ import {
   PALETTE_COOKIE,
   PALETTE_KEYS,
   SETTINGS_COOKIE_MAX_AGE,
+  TWEAK_COOKIES,
+  TWEAK_KEYS,
   serializeCursorEnabled,
+  serializeTweak,
 } from "@/lib/palette";
 
 // F-SET-01 / F-SET-02 / NF-A11Y-03
@@ -56,6 +59,31 @@ export async function setCursor(formData: FormData): Promise<void> {
   cookieStore.set(
     CURSOR_COOKIE,
     serializeCursorEnabled(parsed.data.enabled === "on"),
+    cookieOptions,
+  );
+  revalidatePath("/", "layout");
+}
+
+// #92 Tweaks panel。name = sparkle / tape / stickers / pageFlip、enabled = on/off。
+// 1 アクションで 4 つを兼ねるのは、各 toggle が独立した form なので形を揃えると
+// /settings 側のマークアップが小さくなるため。
+const tweakSchema = z.object({
+  name: z.enum(TWEAK_KEYS),
+  enabled: z.enum(["on", "off"]),
+});
+
+export async function setTweak(formData: FormData): Promise<void> {
+  const parsed = tweakSchema.safeParse({
+    name: formData.get("name"),
+    enabled: formData.get("enabled"),
+  });
+  if (!parsed.success) {
+    throw new SettingsError("invalid-input");
+  }
+  const cookieStore = await cookies();
+  cookieStore.set(
+    TWEAK_COOKIES[parsed.data.name],
+    serializeTweak(parsed.data.enabled === "on"),
     cookieOptions,
   );
   revalidatePath("/", "layout");

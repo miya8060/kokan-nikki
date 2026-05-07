@@ -21,9 +21,15 @@ import {
   PALETTE_KEYS,
   PALETTE_LABELS,
   SETTINGS_COOKIE_MAX_AGE,
+  TWEAK_COOKIES,
+  TWEAK_DEFAULTS,
+  TWEAK_KEYS,
+  TWEAK_LABELS,
   parseCursorEnabled,
   parsePalette,
+  parseTweak,
   serializeCursorEnabled,
+  serializeTweak,
 } from "@/lib/palette";
 
 describe("lib/cn", () => {
@@ -60,6 +66,20 @@ describe("lib/palette", () => {
     expect(parseCursorEnabled("off")).toBe(false);
     expect(serializeCursorEnabled(true)).toBe("on");
     expect(serializeCursorEnabled(false)).toBe("off");
+  });
+
+  it("exposes the #92 Tweaks panel cookie keys / labels / defaults", () => {
+    for (const key of TWEAK_KEYS) {
+      expect(TWEAK_COOKIES[key]).toMatch(/^kokan\./);
+      expect(TWEAK_LABELS[key].name).toBeTruthy();
+      expect(TWEAK_LABELS[key].hint).toBeTruthy();
+      expect(typeof TWEAK_DEFAULTS[key]).toBe("boolean");
+    }
+    expect(parseTweak("sparkle", undefined)).toBe(true);
+    expect(parseTweak("pageFlip", undefined)).toBe(false);
+    expect(parseTweak("tape", "off")).toBe(false);
+    expect(serializeTweak(true)).toBe("on");
+    expect(serializeTweak(false)).toBe("off");
   });
 });
 

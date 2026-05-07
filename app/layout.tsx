@@ -13,8 +13,12 @@ import { cn } from "@/lib/cn";
 import {
   CURSOR_COOKIE,
   PALETTE_COOKIE,
+  TWEAK_COOKIES,
+  TWEAK_KEYS,
   parseCursorEnabled,
   parsePalette,
+  parseTweak,
+  serializeTweak,
 } from "@/lib/palette";
 import "./globals.css";
 
@@ -92,16 +96,25 @@ export default async function RootLayout({
 }>) {
   // F-SET-01 / F-SET-02: cookie を SSR で読み <html> に反映。クライアント側で
   // クラスを付け替える方式だと FOUC が出るのでサーバー側で確定させる。
+  // #92: Tweaks panel の 4 toggle (sparkle / tape / stickers / pageFlip) も同様に
+  // SSR 段階で <html data-...> に反映する。
   const cookieStore = await cookies();
   const palette = parsePalette(cookieStore.get(PALETTE_COOKIE)?.value);
   const cursorEnabled = parseCursorEnabled(
     cookieStore.get(CURSOR_COOKIE)?.value,
+  );
+  const tweakAttrs = Object.fromEntries(
+    TWEAK_KEYS.map((key) => [
+      `data-${key === "pageFlip" ? "page-flip" : key}`,
+      serializeTweak(parseTweak(key, cookieStore.get(TWEAK_COOKIES[key])?.value)),
+    ]),
   );
 
   return (
     <html
       lang="ja"
       data-palette={palette}
+      {...tweakAttrs}
       className={cn(
         mochi.variable,
         maru.variable,
