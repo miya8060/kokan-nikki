@@ -58,7 +58,7 @@ jobs:
       # Testcontainers spins Postgres on the runner's Docker daemon —
       # no `services:` block needed (testing.md §9).
       - run: pnpm test:int --coverage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: integration-coverage
@@ -81,7 +81,7 @@ jobs:
       # tests/e2e/global-setup.ts handles Postgres + migrate + build +
       # next start + readiness polling itself; no extra env wiring here.
       - run: pnpm test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
