@@ -45,6 +45,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "cobertura"],
       include: ["lib/**", "app/_actions/**", "app/api/cron/**"],
+      // 純関数 utility で integration test が import 経路を持たないものは
+      // unit project の方で 100% カバーしている前提で除外する。
+      // (in-app-browser.ts は signin page の server component からだけ呼ばれるが、
+      //  signin page 自体に integration test が無いため integration run では 0%
+      //  扱いになり、lib/** branches threshold を引きずり下ろしてしまう)
+      exclude: ["lib/in-app-browser.ts"],
       thresholds: {
         "lib/**": { lines: 80, branches: 75 },
         "app/_actions/**": { lines: 70, branches: 65 },

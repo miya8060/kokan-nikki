@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -5,7 +6,10 @@ import { requestSignIn, signInWithOAuth } from "@/app/_actions/auth";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { auth, oauthProviders } from "@/lib/auth";
+import { detectInAppBrowser } from "@/lib/in-app-browser";
 import { pickInternalCallbackUrl } from "@/lib/safe-redirect";
+
+import { InAppBrowserNotice } from "./_components/InAppBrowserNotice";
 
 type SignInPageProps = {
   searchParams: Promise<{ callbackUrl?: string | string[] }>;
@@ -22,6 +26,19 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = await searchParams;
   const redirectTo = pickInternalCallbackUrl(params.callbackUrl, "/notebooks");
 
+  // NF-AUTH: SNS アプリの内蔵 WebView (LINE / X / Instagram / FB) から踏むと
+  // Google が "disallowed_useragent" で 403 を返す。UA を見て検出した場合は
+  // 外部ブラウザへ誘導する banner を出す (詳細は lib/in-app-browser.ts)。
+  const headerStore = await headers();
+  const detection = detectInAppBrowser(headerStore.get("user-agent"));
+  const proto = headerStore.get("x-forwarded-proto") ?? "https";
+  const host = headerStore.get("host") ?? "kokannikki.app";
+  const callbackQuery =
+    typeof params.callbackUrl === "string"
+      ? `?callbackUrl=${encodeURIComponent(params.callbackUrl)}`
+      : "";
+  const currentUrl = `${proto}://${host}/auth/signin${callbackQuery}`;
+
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-24">
       <Sticker tape className="w-full max-w-md p-10 sm:p-12">
@@ -31,6 +48,13 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <p className="text-ink-soft mt-3 text-sm leading-7 sm:text-base sm:leading-8">
           メールアドレスを入れてね。マジックリンクを送るよ。
         </p>
+
+        {detection ? (
+          <InAppBrowserNotice
+            detection={detection}
+            currentUrl={currentUrl}
+          />
+        ) : null}
 
         <form action={requestSignIn} className="mt-6 flex flex-col gap-4">
           <input type="hidden" name="redirectTo" value={redirectTo} />
