@@ -1,27 +1,32 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { createNotebookFromForm } from "@/app/_actions/notebooks";
-import { PuffButton } from "@/components/ui/PuffButton";
-import { Sticker } from "@/components/ui/Sticker";
-import { UserAvatar } from "@/components/ui/UserAvatar";
+import { CardAdd } from "@/app/notebooks/_components/CardAdd";
+import { Composer } from "@/app/notebooks/_components/Composer";
+import {
+  Diamond,
+  FlowerGlyph,
+  HeartGlyph,
+  StarSparkle,
+  StickerByKind,
+} from "@/app/notebooks/_components/Glyphs";
+import {
+  buildPreview,
+  formatJpDateTime,
+  formatPartnerLabel,
+  isFreshNotebook,
+  pickCoverPalette,
+  pickStickers,
+  pickTapeStripe,
+} from "@/app/notebooks/_lib/cover";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { NOTEBOOK_NAME_MAX } from "@/lib/schemas/notebook";
 import { getNextTurnUserId } from "@/lib/turn";
 
-// F-NB-04: 自分が参加しているノートの一覧を最終更新日時 + 次のターン者と一緒に
-// 表示する。一覧にぶら下げる新規作成フォームは F-NB-01 / F-NB-03 を満たす。
+import styles from "./notebooks.module.css";
 
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  // C-04: 表示は Asia/Tokyo、内部は UTC のまま。
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+// F-NB-04: 自分が参加しているノート一覧。リデザインでは表紙風の Diary card を
+// 並べる。色 / シール / マステは notebook.id をハッシュした決定的レイアウト。
 
 export default async function NotebooksPage() {
   const session = await auth();
@@ -33,20 +38,28 @@ export default async function NotebooksPage() {
     redirect("/onboarding/name?callbackUrl=/notebooks");
   }
 
+  // memberships は orderIndex で No.XX タグを出すために orderIndex も select。
+  // entries は最新 1 件 (createdAt + body + authorId) を fetch しプレビューに使う。
   const memberships = await prisma.notebookMember.findMany({
     where: { userId },
     select: {
       joinedAt: true,
+      orderIndex: true,
       notebook: {
         select: {
           id: true,
           name: true,
           createdAt: true,
           entries: {
-            select: { createdAt: true },
-            // NF-CON-02: 同 createdAt のときも一意な順序にするため id を併用。
+            select: { createdAt: true, body: true },
             orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             take: 1,
+          },
+          members: {
+            where: { userId: { not: userId } },
+            select: {
+              user: { select: { id: true, name: true } },
+            },
           },
         },
       },
@@ -55,119 +68,277 @@ export default async function NotebooksPage() {
   });
 
   const items = await Promise.all(
-    memberships.map(async ({ notebook }) => {
-      const lastUpdatedAt =
-        notebook.entries[0]?.createdAt ?? notebook.createdAt;
+    memberships.map(async ({ orderIndex, notebook }) => {
+      const lastEntry = notebook.entries[0];
+      const lastUpdatedAt = lastEntry?.createdAt ?? notebook.createdAt;
       const nextTurnUserId = await getNextTurnUserId(notebook.id);
-      const nextTurnUser = nextTurnUserId
-        ? await prisma.user.findUnique({
-            where: { id: nextTurnUserId },
-            select: { id: true, name: true, image: true },
-          })
-        : null;
+
+      const partnerNames = notebook.members
+        .map((m) => m.user.name?.trim())
+        .filter((n): n is string => !!n && n.length > 0);
+      const partnerLabel = formatPartnerLabel(partnerNames);
+
+      const isYourTurn = nextTurnUserId === userId;
+      let nextTurnLabel: string;
+      if (isYourTurn) {
+        nextTurnLabel = "あなた ♡";
+      } else if (nextTurnUserId) {
+        const next = await prisma.user.findUnique({
+          where: { id: nextTurnUserId },
+          select: { name: true },
+        });
+        // F-AUTH-05: name 未設定 user (X 経由 + onboarding 未完了) の placeholder。
+        nextTurnLabel = `${next?.name ?? "ななしさん"} のばん`;
+      } else {
+        nextTurnLabel = "—";
+      }
+
       return {
         id: notebook.id,
         name: notebook.name,
+        orderIndex,
         lastUpdatedAt,
-        // F-AUTH-05: email は nullable になったので fallback には使えない。
-        // name 未設定の user (X 経由 + onboarding 未完了) は placeholder。
-        nextTurnLabel: nextTurnUser ? (nextTurnUser.name ?? "ななしさん") : "—",
-        nextTurnImageUrl: nextTurnUser?.image ?? null,
-        isYourTurn: nextTurnUserId === userId,
+        preview: buildPreview(lastEntry?.body),
+        partnerLabel,
+        nextTurnLabel,
+        isYourTurn,
+        isNew: isFreshNotebook(notebook.createdAt),
       };
     }),
   );
 
+  // フレンズリボン: 自分の参加ノート全体から自分以外の member 名を集めて重複除去。
+  const friendNames = (() => {
+    const seen = new Map<string, string>();
+    for (const { notebook } of memberships) {
+      for (const m of notebook.members) {
+        const name = m.user.name?.trim();
+        if (!name) continue;
+        if (!seen.has(m.user.id)) seen.set(m.user.id, name);
+      }
+    }
+    return Array.from(seen.values());
+  })();
+
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
-      <header className="relative text-center">
-        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl">
-          ♡ にっき いちらん
-        </h1>
-        <p className="text-ink-soft mt-2 text-sm">
-          {items.length} さつ の こうかんにっき
-        </p>
+    <main className={styles.page}>
+      <div className={styles.topbar}>
         <Link
           href="/settings"
           data-testid="nav-settings"
-          className="text-ink-soft hover:text-pink-2 absolute top-0 right-0 text-xs underline-offset-4 hover:underline"
+          className={styles.btnIcon}
+          aria-label="せってい"
         >
-          ⚙ せってい
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle
+              cx="9"
+              cy="9"
+              r="2.5"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M9 1v2 M9 15v2 M1 9h2 M15 9h2 M3 3l1.4 1.4 M13.6 13.6 L15 15 M3 15l1.4-1.4 M13.6 4.4 L15 3"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
         </Link>
+      </div>
+
+      <header className={styles.hero}>
+        <span className={styles.heroEyebrow}>★ MY SECRET DIARIES ★</span>
+        <h1 className={styles.heroTitle}>
+          <span className={styles.heroHeart}>♡</span> にっき いちらん
+        </h1>
+        <p className={styles.heroSubtitle}>
+          {items.length} さつ の{" "}
+          <span className={styles.heroSubtitleMark}>
+            ひみつ の こうかんにっき
+          </span>
+          、ぜんぶ ここに ♡
+        </p>
+        <span className={`${styles.heroGlyph} ${styles.heroGlyphG1}`}>
+          <StarSparkle size={28} />
+        </span>
+        <span className={`${styles.heroGlyph} ${styles.heroGlyphG2}`}>
+          <HeartGlyph size={24} color="#ff3aa9" />
+        </span>
+        <span className={`${styles.heroGlyph} ${styles.heroGlyphG3}`}>
+          <Diamond size={20} />
+        </span>
+        <span className={`${styles.heroGlyph} ${styles.heroGlyphG4}`}>
+          <FlowerGlyph size={28} />
+        </span>
       </header>
 
-      <Sticker tape className="p-8">
-        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
-          ★ あたらしい にっき
-        </h2>
-        <form
-          action={createNotebookFromForm}
-          className="mt-4 flex flex-col gap-3"
-        >
-          <label className="flex flex-col gap-2 text-left">
-            <span className="text-ink-soft text-xs tracking-wider uppercase">
-              name
-            </span>
-            <input
-              type="text"
-              name="name"
-              required
-              maxLength={NOTEBOOK_NAME_MAX}
-              placeholder="ひみつ こうかんにっき"
-              className="border-ink text-ink focus:ring-pink rounded-2xl border-2 bg-white px-4 py-3 text-base shadow-[0_3px_0_var(--ink)] outline-none focus:ring-2"
-            />
-          </label>
-          <div className="flex justify-center pt-2">
-            <PuffButton type="submit">♡ つくる</PuffButton>
-          </div>
-        </form>
-      </Sticker>
+      <Composer />
 
       {items.length === 0 ? (
-        <Sticker className="p-8 text-center">
-          <p className="text-ink-soft text-sm leading-7">
-            まだ にっきが ないよ。
-            <br />
-            さいしょの 1 さつを つくってみよう ♡
-          </p>
-        </Sticker>
+        <p className={styles.emptyCard}>
+          まだ にっきが ないよ。
+          <br />
+          さいしょの 1 さつを つくってみよう ♡
+        </p>
       ) : (
-        <ul className="flex flex-col gap-4">
-          {items.map((item) => (
-            <li key={item.id}>
-              <Link
-                href={`/notebooks/${item.id}`}
-                className="block transition hover:-translate-y-0.5"
-              >
-                <Sticker className="p-6">
-                  <h3 className="text-ink font-[family-name:var(--font-mochi)] text-lg">
-                    {item.name}
-                  </h3>
-                  <dl className="text-ink-soft mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                    <dt>さいしゅう こうしん</dt>
-                    <dd>{dateFormatter.format(item.lastUpdatedAt)}</dd>
-                    <dt>つぎの ばん</dt>
-                    <dd>
-                      {item.isYourTurn ? (
-                        <strong className="text-pink-2">あなた ♡</strong>
-                      ) : item.nextTurnLabel === "—" ? (
-                        "—"
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 align-middle">
-                          <UserAvatar
-                            imageValue={item.nextTurnImageUrl}
-                            displayName={item.nextTurnLabel}
-                          />
-                          <span>{item.nextTurnLabel}</span>
+        <>
+          <div className={styles.listHead}>
+            <h2 className={styles.listTitle}>
+              ぜんぶの にっき
+              <span className={styles.listBadge}>{items.length}</span>
+            </h2>
+          </div>
+
+          <ul className={styles.cards}>
+            {items.map((item) => {
+              const palette = pickCoverPalette(item.id);
+              const tapeStripe = pickTapeStripe(item.id);
+              const stickers = pickStickers(item.id);
+              return (
+                <li key={item.id}>
+                  <Link
+                    href={`/notebooks/${item.id}`}
+                    className={styles.cardLink}
+                  >
+                    {item.isNew && (
+                      <div className={styles.newBadge}>
+                        <span
+                          className={styles.newBadgeRing}
+                          aria-hidden="true"
+                        />
+                        NEW!
+                      </div>
+                    )}
+                    <span
+                      className={`${styles.cardTape} ${
+                        tapeStripe ? styles.cardTapeStripe : ""
+                      }`}
+                      style={
+                        {
+                          "--tape-color": palette.tape,
+                          "--tape-r": palette.tapeR,
+                        } as React.CSSProperties
+                      }
+                      aria-hidden="true"
+                    />
+                    <div
+                      className={styles.cardCover}
+                      style={
+                        {
+                          "--cover": palette.c1,
+                          "--cover-2": palette.c2,
+                        } as React.CSSProperties
+                      }
+                    >
+                      <span className={styles.cardSpine} aria-hidden="true" />
+                      <div
+                        className={styles.cardStickers}
+                        aria-hidden="true"
+                      >
+                        {stickers.map((s, i) => (
+                          <div
+                            key={`${item.id}-st-${i}`}
+                            className={styles.cardSticker}
+                            style={
+                              {
+                                left: s.x,
+                                top: s.y,
+                                "--st-r": `${s.r}deg`,
+                              } as React.CSSProperties
+                            }
+                          >
+                            <StickerByKind
+                              kind={s.kind}
+                              size={s.size}
+                              color={s.color}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className={styles.coverHead}>
+                        <span className={styles.coverTag}>
+                          No.{String(item.orderIndex + 1).padStart(2, "0")}
                         </span>
-                      )}
-                    </dd>
-                  </dl>
-                </Sticker>
-              </Link>
+                        <span
+                          className={styles.coverFav}
+                          aria-hidden="true"
+                        >
+                          ♡
+                        </span>
+                      </div>
+                      <div className={styles.coverTitleWrap}>
+                        <h3 className={styles.coverTitle}>{item.name}</h3>
+                        {item.preview && (
+                          <p className={styles.coverPre}>『{item.preview}』</p>
+                        )}
+                      </div>
+                      <div className={styles.coverFoot}>
+                        <div className={styles.coverMeta}>
+                          <span className={styles.coverMetaKey}>
+                            SAISHU KOSHIN
+                          </span>
+                          <span className={styles.coverMetaVal}>
+                            {formatJpDateTime(item.lastUpdatedAt)}
+                          </span>
+                          {item.partnerLabel && (
+                            <span className={styles.coverMetaKey}>
+                              with {item.partnerLabel}
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          className={`${styles.turnChip} ${
+                            item.isYourTurn
+                              ? styles.turnChipYou
+                              : styles.turnChipThem
+                          }`}
+                        >
+                          <span
+                            className={styles.turnChipAv}
+                            aria-hidden="true"
+                          />
+                          {item.nextTurnLabel}
+                          {item.isYourTurn && (
+                            <span
+                              className={styles.turnChipPulse}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+            <li>
+              <CardAdd />
             </li>
-          ))}
-        </ul>
+          </ul>
+        </>
+      )}
+
+      {friendNames.length > 0 && (
+        <div className={styles.friends}>
+          <div className={styles.friendsTitle}>
+            <HeartGlyph size={18} color="#ff3aa9" />
+            こうかん ちゅうの ともだち
+          </div>
+          <div className={styles.friendStack}>
+            {friendNames.slice(0, 6).map((name) => (
+              <span key={name} className={styles.friend} aria-label={name}>
+                {Array.from(name)[0] ?? "?"}
+              </span>
+            ))}
+            {friendNames.length > 6 && (
+              <span className={styles.friend}>+{friendNames.length - 6}</span>
+            )}
+          </div>
+          <div className={styles.friendsCta}>
+            あたらしい ともだちと はじめる ♡
+          </div>
+        </div>
       )}
     </main>
   );
