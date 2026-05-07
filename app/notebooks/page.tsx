@@ -38,13 +38,14 @@ export default async function NotebooksPage() {
     redirect("/onboarding/name?callbackUrl=/notebooks");
   }
 
-  // memberships は orderIndex で No.XX タグを出すために orderIndex も select。
+  // memberships は user 視点の通し番号 (= joinedAt ASC の配列 index+1) で No.XX
+  // タグを出すため、ここでは orderIndex は引かない (notebook 内のメンバー順は
+  // 別概念で、自作ノートだと常に 0 になり No.01 で固まる)。
   // entries は最新 1 件 (createdAt + body + authorId) を fetch しプレビューに使う。
   const memberships = await prisma.notebookMember.findMany({
     where: { userId },
     select: {
       joinedAt: true,
-      orderIndex: true,
       notebook: {
         select: {
           id: true,
@@ -68,7 +69,7 @@ export default async function NotebooksPage() {
   });
 
   const items = await Promise.all(
-    memberships.map(async ({ orderIndex, notebook }) => {
+    memberships.map(async ({ notebook }, index) => {
       const lastEntry = notebook.entries[0];
       const lastUpdatedAt = lastEntry?.createdAt ?? notebook.createdAt;
       const nextTurnUserId = await getNextTurnUserId(notebook.id);
@@ -96,7 +97,7 @@ export default async function NotebooksPage() {
       return {
         id: notebook.id,
         name: notebook.name,
-        orderIndex,
+        serialNo: index + 1,
         lastUpdatedAt,
         preview: buildPreview(lastEntry?.body),
         partnerLabel,
@@ -258,7 +259,7 @@ export default async function NotebooksPage() {
                       </div>
                       <div className={styles.coverHead}>
                         <span className={styles.coverTag}>
-                          No.{String(item.orderIndex + 1).padStart(2, "0")}
+                          No.{String(item.serialNo).padStart(2, "0")}
                         </span>
                         <span
                           className={styles.coverFav}
