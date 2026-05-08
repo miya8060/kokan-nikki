@@ -22,11 +22,23 @@ const IOS_OPEN_HINT: Record<InAppBrowserDetection["browser"], string> = {
 type Props = {
   detection: InAppBrowserDetection;
   currentUrl: string;
+  // page 側で「env で enable されているが filter で hide された provider」
+  // のラベルを計算して渡す。空配列のときは fallback で "Google" を使う
+  // (Google は SNS WebView 全般で 403 になる典型ケースなので)。
+  blockedProviderLabels: string[];
 };
 
-export function InAppBrowserNotice({ detection, currentUrl }: Props) {
+export function InAppBrowserNotice({
+  detection,
+  currentUrl,
+  blockedProviderLabels,
+}: Props) {
   const externalUrl = buildExternalBrowserUrl(currentUrl, detection);
   const appLabel = APP_LABEL[detection.browser];
+  const blockedLabel =
+    blockedProviderLabels.length > 0
+      ? blockedProviderLabels.join(" や ")
+      : "Google";
 
   return (
     <div
@@ -34,7 +46,8 @@ export function InAppBrowserNotice({ detection, currentUrl }: Props) {
       className="border-ink mt-6 rounded-2xl border-2 border-dashed bg-white/70 p-4 text-left shadow-[0_3px_0_var(--ink)]"
     >
       <p className="text-ink text-sm font-bold">
-        ⚠ {appLabel} の中の ブラウザでは Google さいんいんが できないよ
+        ⚠ {appLabel} の中の ブラウザでは {blockedLabel} さいんいんが
+        つかえないよ
       </p>
       <p className="text-ink-soft mt-2 text-xs leading-6">
         Google が SNS の 内蔵ブラウザでの ログインを ことわっているので、

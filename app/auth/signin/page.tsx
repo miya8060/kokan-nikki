@@ -6,7 +6,10 @@ import { requestSignIn, signInWithOAuth } from "@/app/_actions/auth";
 import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { auth, oauthProviders } from "@/lib/auth";
-import { detectInAppBrowser } from "@/lib/in-app-browser";
+import {
+  detectInAppBrowser,
+  shouldShowOAuthProvider,
+} from "@/lib/in-app-browser";
 import { pickInternalCallbackUrl } from "@/lib/safe-redirect";
 
 import { InAppBrowserNotice } from "./_components/InAppBrowserNotice";
@@ -39,6 +42,23 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       : "";
   const currentUrl = `${proto}://${host}/auth/signin${callbackQuery}`;
 
+  // in-app browser 検出時は、provider 側で動かない OAuth ボタンを隠して
+  // 「押したら 403」を踏ませない。同 app の provider (LINE-in-LINE / X-in-X)
+  // だけ残す。Google は SNS WebView 全般で disallowed_useragent なので常に隠す。
+  const showGoogle =
+    oauthProviders.google && shouldShowOAuthProvider("google", detection);
+  const showLine =
+    oauthProviders.line && shouldShowOAuthProvider("line", detection);
+  const showTwitter =
+    oauthProviders.twitter && shouldShowOAuthProvider("twitter", detection);
+
+  // banner には「env で enable されているが今 hide した provider」のラベルを
+  // 渡して、ユーザーが見えていたはずのボタンが消えた事実を文言に反映する。
+  const blockedProviderLabels: string[] = [];
+  if (oauthProviders.google && !showGoogle) blockedProviderLabels.push("Google");
+  if (oauthProviders.line && !showLine) blockedProviderLabels.push("LINE");
+  if (oauthProviders.twitter && !showTwitter) blockedProviderLabels.push("X");
+
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-24">
       <Sticker tape className="w-full max-w-md p-10 sm:p-12">
@@ -53,6 +73,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <InAppBrowserNotice
             detection={detection}
             currentUrl={currentUrl}
+            blockedProviderLabels={blockedProviderLabels}
           />
         ) : null}
 
@@ -76,9 +97,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </div>
         </form>
 
-        {(oauthProviders.google ||
-          oauthProviders.line ||
-          oauthProviders.twitter) && (
+        {(showGoogle || showLine || showTwitter) && (
           <>
             <div className="text-ink-soft mt-8 flex items-center gap-3 text-xs tracking-wider uppercase">
               <span className="bg-ink-soft/30 h-px flex-1" />
@@ -87,7 +106,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             </div>
 
             <div className="mt-6 flex flex-col gap-3">
-              {oauthProviders.google && (
+              {showGoogle && (
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="google" />
                   <input type="hidden" name="redirectTo" value={redirectTo} />
@@ -96,7 +115,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                   </PuffButton>
                 </form>
               )}
-              {oauthProviders.line && (
+              {showLine && (
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="line" />
                   <input type="hidden" name="redirectTo" value={redirectTo} />
@@ -105,7 +124,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                   </PuffButton>
                 </form>
               )}
-              {oauthProviders.twitter && (
+              {showTwitter && (
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="twitter" />
                   <input type="hidden" name="redirectTo" value={redirectTo} />
