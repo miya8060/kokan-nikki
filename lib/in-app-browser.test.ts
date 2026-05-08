@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildExternalBrowserUrl,
   detectInAppBrowser,
+  shouldShowOAuthProvider,
 } from "./in-app-browser";
 
 // NF-AUTH: signin ページの「Google で disallowed_useragent」回避のため、
@@ -149,5 +150,75 @@ describe("buildExternalBrowserUrl", () => {
         platform: "unknown",
       }),
     ).toBeNull();
+  });
+});
+
+describe("shouldShowOAuthProvider", () => {
+  // 通常ブラウザでは全 provider を表示
+  it("detection が null (通常ブラウザ) なら全 provider を表示", () => {
+    expect(shouldShowOAuthProvider("google", null)).toBe(true);
+    expect(shouldShowOAuthProvider("line", null)).toBe(true);
+    expect(shouldShowOAuthProvider("twitter", null)).toBe(true);
+  });
+
+  it("Google は in-app browser 検出時は常に非表示 (disallowed_useragent)", () => {
+    for (const browser of ["line", "twitter", "instagram", "facebook"] as const) {
+      expect(
+        shouldShowOAuthProvider("google", { browser, platform: "ios" }),
+      ).toBe(false);
+    }
+  });
+
+  it("LINE は LINE webview のときだけ残す", () => {
+    expect(
+      shouldShowOAuthProvider("line", { browser: "line", platform: "ios" }),
+    ).toBe(true);
+    expect(
+      shouldShowOAuthProvider("line", { browser: "line", platform: "android" }),
+    ).toBe(true);
+    for (const browser of ["twitter", "instagram", "facebook"] as const) {
+      expect(
+        shouldShowOAuthProvider("line", { browser, platform: "ios" }),
+      ).toBe(false);
+    }
+  });
+
+  it("Twitter (X) は X webview のときだけ残す", () => {
+    expect(
+      shouldShowOAuthProvider("twitter", {
+        browser: "twitter",
+        platform: "ios",
+      }),
+    ).toBe(true);
+    expect(
+      shouldShowOAuthProvider("twitter", {
+        browser: "twitter",
+        platform: "android",
+      }),
+    ).toBe(true);
+    for (const browser of ["line", "instagram", "facebook"] as const) {
+      expect(
+        shouldShowOAuthProvider("twitter", { browser, platform: "ios" }),
+      ).toBe(false);
+    }
+  });
+
+  it("Instagram / Facebook webview では LINE / Twitter の provider も非表示", () => {
+    // Instagram / Facebook 自体の OAuth は kokannikki.app で未対応。
+    // どの provider も in-app から動かないため magic link に倒す。
+    for (const provider of ["google", "line", "twitter"] as const) {
+      expect(
+        shouldShowOAuthProvider(provider, {
+          browser: "instagram",
+          platform: "ios",
+        }),
+      ).toBe(false);
+      expect(
+        shouldShowOAuthProvider(provider, {
+          browser: "facebook",
+          platform: "android",
+        }),
+      ).toBe(false);
+    }
   });
 });

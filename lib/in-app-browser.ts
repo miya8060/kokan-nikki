@@ -84,3 +84,25 @@ function toAndroidIntentUrl(httpsUrl: string): string | null {
   const hostPath = `${parsed.host}${parsed.pathname}${parsed.search}`;
   return `intent://${hostPath}#Intent;scheme=${scheme};package=com.android.chrome;end`;
 }
+
+export type OAuthProviderId = "google" | "line" | "twitter";
+
+// signin ページで OAuth ボタンを出してよいか。in-app browser 検出時は、
+// provider 側で確実に弾かれる組み合わせのボタンを隠してユーザーが
+// 踏んで 403 になるのを防ぐ。
+//
+// ルール:
+// - 通常ブラウザ (detection === null) なら全 provider を表示
+// - Google は SNS WebView 全般を disallowed_useragent で弾くので常に非表示
+// - LINE / Twitter (X) は同じ app の WebView (LINE-in-LINE / X-in-X) なら
+//   provider 自身が webview を許容する想定で残す
+// - それ以外 (cross-app, Instagram / Facebook) は安全側に倒して非表示
+
+export function shouldShowOAuthProvider(
+  provider: OAuthProviderId,
+  detection: InAppBrowserDetection | null,
+): boolean {
+  if (!detection) return true;
+  if (provider === "google") return false;
+  return detection.browser === provider;
+}
