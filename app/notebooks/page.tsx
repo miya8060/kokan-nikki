@@ -11,6 +11,7 @@ import {
   StarSparkle,
   StickerByKind,
 } from "@/app/notebooks/_components/Glyphs";
+import { NotebookCardLink } from "@/app/notebooks/_components/NotebookCardLink";
 import {
   buildPreview,
   formatJpDateTime,
@@ -57,6 +58,10 @@ export default async function NotebooksPage() {
     "sparkle",
     cookieStore.get(TWEAK_COOKIES.sparkle)?.value,
   );
+  const tweaksPageFlip = parseTweak(
+    "pageFlip",
+    cookieStore.get(TWEAK_COOKIES.pageFlip)?.value,
+  );
 
   // memberships は user 視点の通し番号 (= joinedAt ASC の配列 index+1) で No.XX
   // タグを出すため、ここでは orderIndex は引かない (notebook 内のメンバー順は
@@ -73,7 +78,12 @@ export default async function NotebooksPage() {
           color: true,
           createdAt: true,
           entries: {
-            select: { createdAt: true, body: true },
+            select: {
+              createdAt: true,
+              title: true,
+              body: true,
+              author: { select: { id: true, name: true } },
+            },
             orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             take: 1,
           },
@@ -133,6 +143,17 @@ export default async function NotebooksPage() {
         nextTurnDisplayName,
         isYourTurn,
         isNew: isFreshNotebook(notebook.createdAt),
+        // SpreadOverlay (#91) 用に直近 entry の本文 / 著者情報も渡す。
+        // 一覧表示には使わないが、card の overlay を開いたとき左ページに描画する。
+        lastEntry: lastEntry
+          ? {
+              createdAt: lastEntry.createdAt,
+              title: lastEntry.title?.trim() || null,
+              body: lastEntry.body,
+              authorName: lastEntry.author.name?.trim() || "ななしさん",
+              authorIsYou: lastEntry.author.id === userId,
+            }
+          : null,
       };
     }),
   );
@@ -227,8 +248,11 @@ export default async function NotebooksPage() {
               const stickers = pickStickers(item.id);
               return (
                 <li key={item.id}>
-                  <Link
-                    href={`/notebooks/${item.id}`}
+                  <NotebookCardLink
+                    notebookId={item.id}
+                    notebookName={item.name}
+                    pageFlipEnabled={tweaksPageFlip}
+                    lastEntry={item.lastEntry}
                     className={styles.cardLink}
                   >
                     {item.isNew && (
@@ -350,7 +374,7 @@ export default async function NotebooksPage() {
                         </span>
                       </div>
                     </div>
-                  </Link>
+                  </NotebookCardLink>
                 </li>
               );
             })}
