@@ -321,7 +321,11 @@ describe("uploadIcon (F-USER-03)", () => {
     const [key, body, options] = mocks.put.mock.calls[0]!;
     expect(key).toBe(`users/${user.id}/icon.jpg`);
     expect(body).toBeInstanceOf(File);
-    expect(options).toMatchObject({ access: "public", contentType: "image/jpeg" });
+    expect(options).toMatchObject({
+      access: "public",
+      contentType: "image/jpeg",
+      addRandomSuffix: true,
+    });
 
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated?.image).toBe(UPLOADED_URL);
