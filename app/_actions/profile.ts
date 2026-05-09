@@ -109,7 +109,10 @@ export async function setIcon(formData: FormData): Promise<void> {
 // File を multipart で送ってくる。Server 側でも mime / size を再検証 (信頼源)。
 //   - BLOB_READ_WRITE_TOKEN 未設定 (Preview / 一部 dev): "upload-disabled" で
 //     422 相当を返す。preset 経路はこのとき通常通り使える。
-//   - put は addRandomSuffix=true (デフォルト) なので key の衝突は SDK 側で吸収。
+//   - put は addRandomSuffix:true 必須。@vercel/blob v1 まではデフォルト true
+//     だったが v2 で false に変わったため、明示しないと 2 回目以降の同 key put
+//     が "blob already exists" で 500 になる。random suffix で URL が毎回変わる
+//     = CDN/<img> キャッシュも汚染されないので副次的に都合が良い。
 //   - put 成功後、旧 image がアップロード URL なら同期 del() で消す。失敗は
 //     ログだけ残して続行 (孤児 blob を許容)。
 export async function uploadIcon(formData: FormData): Promise<void> {
@@ -146,6 +149,7 @@ export async function uploadIcon(formData: FormData): Promise<void> {
   const result = await put(`users/${userId}/icon.jpg`, file, {
     access: "public",
     contentType: "image/jpeg",
+    addRandomSuffix: true,
   });
 
   await prisma.user.update({
