@@ -1,30 +1,19 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { sendNudgeFromForm } from "@/app/_actions/nudges";
-import { PuffButton } from "@/components/ui/PuffButton";
-import { Sticker } from "@/components/ui/Sticker";
-import { UserAvatar } from "@/components/ui/UserAvatar";
 import { auth } from "@/lib/auth";
 import { getNotebookDetail } from "@/lib/notebooks";
-import { NUDGE_RATE_LIMIT_MS } from "@/lib/nudges";
+import { prisma } from "@/lib/prisma";
 
+import { DiaryHero } from "./_components/DiaryHero";
 import { EntriesList } from "./_components/EntriesList";
+import { StatusCard } from "./_components/StatusCard";
+import styles from "./notebook-detail.module.css";
 
 // F-TURN-04: タイムラインは新しい順。F-TURN-05 の UI 側ガードは /write 側で
 // 行うため、ここでは「自分のターンのときだけ書き込み導線を出す」までに留める。
 // F-NUDGE-01〜02: ターン外のメンバーには「もう書いた？」ボタンを出す。
 // 24h 以内に送信済みならボタンを無効化して案内を出す (NUDGE_RATE_LIMIT_MS)。
-
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  // C-04: 表示は Asia/Tokyo、内部は UTC のまま。
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 export default async function NotebookDetailPage({
   params,
@@ -47,155 +36,61 @@ export default async function NotebookDetailPage({
   const detail = await getNotebookDetail(id, userId);
   if (!detail) notFound();
 
-  return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
-      <header className="text-center">
-        <h1 className="text-ink font-[family-name:var(--font-mochi)] text-3xl">
-          ♡ {detail.name}
-        </h1>
-        <p className="text-ink-soft mt-2 text-sm">
-          {detail.members.length} にん で こうかんちゅう
-        </p>
-      </header>
+  // No.XX 表示用の通し番号は viewer の参加ノート全体での位置 (joinedAt ASC、
+  // 一覧画面と同じ順序)。ID だけ引いて index を取る軽い query。
+  const memberships = await prisma.notebookMember.findMany({
+    where: { userId },
+    orderBy: { joinedAt: "asc" },
+    select: { notebookId: true },
+  });
+  const serialNo =
+    Math.max(
+      0,
+      memberships.findIndex((m) => m.notebookId === detail.id),
+    ) + 1;
 
-      <Sticker className="p-6">
-        <dl className="text-ink-soft grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt>つぎの ばん</dt>
-          <dd>
-            {detail.isYourTurn ? (
-              <strong className="text-pink-2">あなた ♡</strong>
-            ) : detail.nextTurnDisplayName ? (
-              <span className="inline-flex items-center gap-2 align-middle">
-                <UserAvatar
-                  imageValue={detail.nextTurnImageUrl}
-                  displayName={detail.nextTurnDisplayName}
-                />
-                <span>{detail.nextTurnDisplayName}</span>
-              </span>
-            ) : (
-              "—"
-            )}
-          </dd>
-          <dt>メンバー</dt>
-          <dd>
-            <ul className="flex flex-wrap gap-x-3 gap-y-1">
-              {detail.members.map((m) => (
-                <li key={m.userId} className="inline-flex items-center gap-1.5">
-                  <UserAvatar
-                    imageValue={m.imageUrl}
-                    displayName={m.displayName}
-                  />
-                  <span>{m.displayName}</span>
-                </li>
-              ))}
-            </ul>
-          </dd>
-        </dl>
-        {detail.isYourTurn ? (
-          <div className="flex justify-center pt-4">
-            <PuffButton href={`/notebooks/${detail.id}/write`}>
-              ♡ きょうの にっきを かく
-            </PuffButton>
+  return (
+    <main className={styles.page}>
+      <Link href="/notebooks" className={styles.backPill}>
+        <span className={styles.backPillArrow} aria-hidden="true">
+          ←
+        </span>
+        にっき いちらん
+      </Link>
+
+      <DiaryHero notebook={detail} serialNo={serialNo} />
+
+      <StatusCard notebook={detail} viewerUserId={userId} />
+
+      {detail.entries.length === 0 ? (
+        <section className={styles.entries}>
+          <h2 className={styles.entriesTitle}>
+            <span className={styles.entriesStar} aria-hidden="true">
+              ★
+            </span>
+            これまでの にっき
+            <span className={styles.entriesBadge}>0</span>
+          </h2>
+          <div className={styles.entriesEmpty}>
+            まだ なにも かかれて いないよ。
+            <br />
+            さいしょの 1 ぺーじを かいてみよう ♡
           </div>
-        ) : detail.nextTurnUserId !== null ? (
-          (() => {
-            // F-NUDGE-02: 24h 以内に送信済みならボタンを disabled にする。
-            // (lint: Date.now() は impure 扱いなので new Date() を使う。)
-            const nextSendableAt =
-              detail.viewerLastNudgeAt === null
-                ? null
-                : new Date(
-                    detail.viewerLastNudgeAt.getTime() + NUDGE_RATE_LIMIT_MS,
-                  );
-            const rateLimited =
-              nextSendableAt !== null &&
-              nextSendableAt.getTime() > new Date().getTime();
-            return (
-              <NudgeBlock
-                notebookId={detail.id}
-                nextTurnDisplayName={detail.nextTurnDisplayName}
-                nextSendableAt={nextSendableAt}
-                rateLimited={rateLimited}
-              />
-            );
-          })()
-        ) : (
-          <p className="text-ink-soft mt-4 text-center text-xs">
-            つぎの ばんの ひとが かいたら じゅんばんが まわってくるよ
-          </p>
-        )}
-        {/* F-INV-01: メンバーは招待 URL を発行できる。発行ページで実際の
-            createInvite を form 経由で呼ぶので、ここではページへの導線のみ */}
-        <div className="mt-4 text-center">
-          <Link
-            href={`/notebooks/${detail.id}/invite`}
-            className="text-ink-soft text-xs underline"
-          >
-            ♡ しょうたい りんくを はっこう する
-          </Link>
-        </div>
-      </Sticker>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl">
-          ★ これまでの にっき
-        </h2>
-        {detail.entries.length === 0 ? (
-          <Sticker className="p-8 text-center">
-            <p className="text-ink-soft text-sm leading-7">
-              まだ なにも かかれて いないよ。
-              <br />
-              さいしょの 1 ぺーじを かいてみよう ♡
-            </p>
-          </Sticker>
-        ) : (
-          <EntriesList entries={detail.entries} notebookId={detail.id} />
-        )}
-      </section>
-
-      <p className="text-center">
-        <Link
-          href="/notebooks"
-          className="text-ink-soft hover:text-pink-2 text-sm underline-offset-4 hover:underline"
-        >
-          ← にっき いちらん へ もどる
-        </Link>
-      </p>
-    </main>
-  );
-}
-
-function NudgeBlock({
-  notebookId,
-  nextTurnDisplayName,
-  nextSendableAt,
-  rateLimited,
-}: {
-  notebookId: string;
-  nextTurnDisplayName: string | null;
-  nextSendableAt: Date | null;
-  rateLimited: boolean;
-}) {
-  // race を弾くのはあくまでサーバー側 (sendNudge) なので、ここの rateLimited は
-  // UX ヒント (24h 以内に送信済みのときだけ disable) でしかない。
-  const submitAction = sendNudgeFromForm.bind(null, notebookId);
-
-  return (
-    <div className="mt-4 flex flex-col items-center gap-2">
-      <p className="text-ink-soft text-center text-xs">
-        つぎの ばんは{" "}
-        <strong className="text-ink">{nextTurnDisplayName ?? "—"}</strong> だよ
-      </p>
-      <form action={submitAction}>
-        <PuffButton type="submit" variant="alt" disabled={rateLimited}>
-          ♡ もう かいた？ って つつく
-        </PuffButton>
-      </form>
-      {rateLimited && nextSendableAt && (
-        <p className="text-ink-soft text-center text-[11px]">
-          つぎに つつけるのは {dateFormatter.format(nextSendableAt)} から
-        </p>
+        </section>
+      ) : (
+        <EntriesList
+          entries={detail.entries}
+          notebookId={detail.id}
+          viewerUserId={userId}
+        />
       )}
-    </div>
+
+      <Link href="/notebooks" className={styles.bottomBack}>
+        <span className={styles.bottomBackArrow} aria-hidden="true">
+          ←
+        </span>
+        にっき いちらん へ もどる
+      </Link>
+    </main>
   );
 }
