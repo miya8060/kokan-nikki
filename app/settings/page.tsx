@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { signOutAction } from "@/app/_actions/auth";
 import { startLinkAccount } from "@/app/_actions/link-account";
 import { setDisplayName, setIcon } from "@/app/_actions/profile";
 import { setCursor, setPalette, setTweak } from "@/app/_actions/settings";
@@ -311,6 +312,24 @@ export default async function SettingsPage({
               {cursorEnabled ? "★ OFF にする" : "★ ON にする"}
             </PuffButton>
           </div>
+        </form>
+      </Sticker>
+
+      <Sticker className="p-8 sm:p-10">
+        <h2 className="text-ink font-[family-name:var(--font-mochi)] text-xl sm:text-2xl">
+          ✿ サインアウト
+        </h2>
+        <p className="text-ink-soft mt-1 text-xs">
+          このたんまつから ぬける。また サインインで もどってこれるよ。
+        </p>
+        <form
+          action={signOutAction}
+          className="mt-5 flex justify-center"
+          data-testid="signout-form"
+        >
+          <PuffButton type="submit" variant="alt" data-testid="signout-button">
+            ✦ サインアウト
+          </PuffButton>
         </form>
       </Sticker>
 
