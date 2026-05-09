@@ -55,7 +55,8 @@ test("ナッジを送ると 24h 以内は同じ送信先へのボタンが disab
   const pageA = await ctxA.newPage();
 
   await pageA.goto(`/notebooks/${notebook.id}`);
-  await expect(pageA.getByText(/つぎの ばんは/)).toContainText("びおら");
+  // turn-badge には次のターン者の名前が「{name}の ばん」 で出る。
+  await expect(pageA.getByText("びおらの ばん")).toBeVisible();
 
   const nudgeButton = pageA.getByRole("button", { name: /もう かいた/ });
   await expect(nudgeButton).toBeEnabled();

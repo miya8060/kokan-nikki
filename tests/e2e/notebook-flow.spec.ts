@@ -56,10 +56,11 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
   // --- (2) A がノート詳細から招待リンクを発行 ----------------------------
   await pageA.getByRole("link", { name: /ひみつ こうかんにっき/ }).click();
   await expect(
-    pageA.getByRole("heading", { name: "♡ ひみつ こうかんにっき" }),
+    pageA.getByRole("heading", { name: "ひみつ こうかんにっき" }),
   ).toBeVisible();
   // 自分しかメンバーが居ない状態では A が次のターン (F-TURN-03)。
-  await expect(pageA.getByText("あなた ♡")).toBeVisible();
+  // 詳細画面の turn-badge は「あなたの ばん!」表示。
+  await expect(pageA.getByText("あなたの ばん!")).toBeVisible();
   await checkA11y(pageA);
 
   await pageA
@@ -89,21 +90,29 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
   // acceptInvite は notebookId に redirect する (F-INV-05/F-INV-06 と同じ動線)。
   await expect(pageB).toHaveURL(/\/notebooks\/[a-z0-9]+$/);
   await expect(
-    pageB.getByRole("heading", { name: "♡ ひみつ こうかんにっき" }),
+    pageB.getByRole("heading", { name: "ひみつ こうかんにっき" }),
   ).toBeVisible();
-  await expect(pageB.getByText(/2 にん で こうかんちゅう/)).toBeVisible();
+  // メンバーが 2 名いることは UserAvatar の aria-label 経由で確認する
+  // (turn-badge / cellWho / memberChip 内に同じ name が複数現れて strict
+  // mode で衝突するため、aria-label をアンカーにする)。
+  await expect(
+    pageB.getByRole("img", { name: "あすか の アイコン" }).first(),
+  ).toBeVisible();
+  await expect(
+    pageB.getByRole("img", { name: "びおら の アイコン" }).first(),
+  ).toBeVisible();
 
   // --- (4) A はまだ次のターン (entries 0 件) -----------------------------
   await pageA.goto("/notebooks");
-  // 一覧の next-turn 表示が「あなた ♡」のまま。
+  // 一覧 (notebooks/page.tsx) の turn-chip は引き続き「あなた ♡」表記。
   await expect(pageA.getByText("あなた ♡")).toBeVisible();
   await pageA.getByRole("link", { name: /ひみつ こうかんにっき/ }).click();
   await expect(
-    pageA.getByRole("link", { name: /きょうの にっきを かく/ }),
+    pageA.getByRole("link", { name: /あたらしい ページを かく/ }),
   ).toBeVisible();
 
   // --- (5) A が投稿 → 次のターンが B に渡る (F-TURN-02) ------------------
-  await pageA.getByRole("link", { name: /きょうの にっきを かく/ }).click();
+  await pageA.getByRole("link", { name: /あたらしい ページを かく/ }).click();
   await expect(pageA).toHaveURL(/\/write$/);
   await pageA.getByLabel("title").fill("A の さいしょの ぺーじ");
   await pageA
@@ -112,8 +121,8 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
   await pageA.getByRole("button", { name: /かきおわった/ }).click();
   // 投稿後は詳細画面に戻り、A は次のターンではなくなる。
   await expect(pageA).toHaveURL(/\/notebooks\/[a-z0-9]+$/);
-  // A 視点では「びおら が次のターン」表示 (= ナッジブロックが見える)。
-  await expect(pageA.getByText(/つぎの ばんは/)).toBeVisible();
+  // A 視点では「びおらの ばん」 turn-badge が出る (= ナッジボタンが見える)。
+  await expect(pageA.getByText("びおらの ばん")).toBeVisible();
   await expect(
     pageA.getByRole("button", { name: /もう かいた/ }),
   ).toBeVisible();
@@ -124,18 +133,16 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
 
   // B 視点でも自分のターンに変わっている。
   await pageB.reload();
-  await expect(pageB.getByText("あなた ♡")).toBeVisible();
+  await expect(pageB.getByText("あなたの ばん!")).toBeVisible();
   await expect(
-    pageB.getByRole("link", { name: /きょうの にっきを かく/ }),
+    pageB.getByRole("link", { name: /あたらしい ページを かく/ }),
   ).toBeVisible();
   // 直前に A が投稿した entry はタイトルで一覧に出ている (F-TURN-04: 新しい順)。
-  // 本文はタイトルをクリックしないと見えない。
+  // 新詳細画面はリストに 2 行クランプの preview を出すが、全文は entries/[id]
+  // に遷移しないと読めないことを下のクリック導線で確認する。
   await expect(
     pageB.getByRole("link", { name: /A の さいしょの ぺーじ/ }),
   ).toBeVisible();
-  await expect(
-    pageB.getByText("きょうは A が さいしょの ぺーじを かいたよ ♡"),
-  ).not.toBeVisible();
 
   // タイトルをクリックして本文ページに遷移、← もどる で戻れる。
   await pageB
@@ -152,18 +159,19 @@ test("notebook → invite → accept → A→B 投稿でターンが回る", asy
   await expect(pageB).toHaveURL(/\/notebooks\/[a-z0-9]+$/);
 
   // --- (6) B が投稿 → 次のターンが A に戻る (F-TURN-04 cyclic) -----------
-  await pageB.getByRole("link", { name: /きょうの にっきを かく/ }).click();
+  await pageB.getByRole("link", { name: /あたらしい ページを かく/ }).click();
   await pageB.getByLabel("title").fill("B から おへんじ");
   await pageB.getByLabel("body").fill("つぎは わたし、B からだよ ♡");
   await pageB.getByRole("button", { name: /かきおわった/ }).click();
   await expect(pageB).toHaveURL(/\/notebooks\/[a-z0-9]+$/);
-  // B はもう次のターンではない。
-  await expect(pageB.getByText("あなた ♡")).not.toBeVisible();
+  // B はもう次のターンではない (= turn-badge は「あすかの ばん」)。
+  await expect(pageB.getByText("あなたの ばん!")).not.toBeVisible();
+  await expect(pageB.getByText("あすかの ばん")).toBeVisible();
 
   await pageA.reload();
-  await expect(pageA.getByText("あなた ♡")).toBeVisible();
+  await expect(pageA.getByText("あなたの ばん!")).toBeVisible();
   // タイムラインは新しい順なので B のタイトルが一番上。
-  const entries = pageA.locator("section ul li");
+  const entries = pageA.locator("section ol li");
   await expect(entries.nth(0)).toContainText("B から おへんじ");
   await expect(entries.nth(1)).toContainText("A の さいしょの ぺーじ");
 
