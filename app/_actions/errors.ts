@@ -133,3 +133,21 @@ export class SendNudgeError extends Error {
     this.reason = reason;
   }
 }
+
+// issue #129 ♡ favorite トグル。invite/postEntry と同じく NF-SEC-04 として
+// notebook member でない user の toggle は弾く (UI 上は member の notebook しか
+// 並ばない前提だが、Server Action は単独で叩かれうる)。
+export type ToggleNotebookFavoriteReason =
+  | "unauthenticated"
+  | "invalid-input"
+  | "not-member";
+
+export class ToggleNotebookFavoriteError extends Error {
+  readonly reason: ToggleNotebookFavoriteReason;
+
+  constructor(reason: ToggleNotebookFavoriteReason) {
+    super(reason);
+    this.name = "ToggleNotebookFavoriteError";
+    this.reason = reason;
+  }
+}

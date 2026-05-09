@@ -12,6 +12,7 @@ import {
   StickerByKind,
 } from "@/app/notebooks/_components/Glyphs";
 import { NotebookCardLink } from "@/app/notebooks/_components/NotebookCardLink";
+import { NotebookFavoriteButton } from "@/app/notebooks/_components/NotebookFavoriteButton";
 import {
   buildPreview,
   formatJpDateTime,
@@ -93,6 +94,14 @@ export default async function NotebooksPage() {
               user: { select: { id: true, name: true } },
             },
           },
+          // issue #129: 自分の ♡ favorite だけ join (notebookId, userId 主キー一発)。
+          // notebooks 側の relation は user 単位なので、where 句で自分の row だけ
+          // 1 件 max になる。
+          favorites: {
+            where: { userId },
+            select: { userId: true },
+            take: 1,
+          },
         },
       },
     },
@@ -142,6 +151,7 @@ export default async function NotebooksPage() {
         nextTurnImage,
         nextTurnDisplayName,
         isYourTurn,
+        isFavorite: notebook.favorites.length > 0,
         isNew: isFreshNotebook(notebook.createdAt),
         // SpreadOverlay (#91) 用に直近 entry の本文 / 著者情報も渡す。
         // 一覧表示には使わないが、card の overlay を開いたとき左ページに描画する。
@@ -318,12 +328,13 @@ export default async function NotebooksPage() {
                         <span className={styles.coverTag}>
                           No.{String(item.serialNo).padStart(2, "0")}
                         </span>
-                        <span
+                        <NotebookFavoriteButton
+                          notebookId={item.id}
+                          notebookName={item.name}
+                          isFavorite={item.isFavorite}
                           className={styles.coverFav}
-                          aria-hidden="true"
-                        >
-                          ♡
-                        </span>
+                          activeClassName={styles.coverFavOn}
+                        />
                       </div>
                       <div className={styles.coverTitleWrap}>
                         <h3 className={styles.coverTitle}>{item.name}</h3>

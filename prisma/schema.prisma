@@ -32,9 +32,10 @@ model User {
   sessions    Session[]
   memberships NotebookMember[]
   entries     Entry[]
-  nudgesSent  Nudge[]          @relation("NudgeFrom")
-  nudgesRcvd  Nudge[]          @relation("NudgeTo")
+  nudgesSent  Nudge[]                @relation("NudgeFrom")
+  nudgesRcvd  Nudge[]                @relation("NudgeTo")
   mergesIn    UserMergeLog[]
+  favorites   UserNotebookFavorite[]
 }
 
 model Account {
@@ -88,10 +89,11 @@ model Notebook {
   createdById String
   createdAt   DateTime @default(now())
 
-  members NotebookMember[]
-  entries Entry[]
-  invites Invite[]
-  nudges  Nudge[]
+  members   NotebookMember[]
+  entries   Entry[]
+  invites   Invite[]
+  nudges    Nudge[]
+  favorites UserNotebookFavorite[]
 }
 
 model NotebookMember {
@@ -163,4 +165,20 @@ model UserMergeLog {
 
   @@index([toUserId, executedAt])
   @@index([fromUserId])
+}
+
+// issue #129: notebook 一覧の ♡ favorite を user 単位で持つ。共有 notebook で
+// メンバー個別に ON/OFF を切り替えたい (Notebook.favorited boolean だと両者で
+// 同じ状態を共有してしまう) ため、関連テーブルとして分離する。
+// notebookId 側は削除カスケードで消える。並べ替え / フィルタ用途は別 issue。
+model UserNotebookFavorite {
+  userId     String
+  notebookId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notebook Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+
+  @@id([userId, notebookId])
+  @@index([notebookId])
 }
