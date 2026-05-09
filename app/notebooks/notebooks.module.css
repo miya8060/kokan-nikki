@@ -523,6 +523,7 @@
 .coverFav {
   width: 30px;
   height: 30px;
+  padding: 0;
   background: #fff;
   border: 2px solid var(--ink);
   border-radius: 50%;
@@ -532,6 +533,42 @@
   box-shadow: 0 2px 0 var(--ink);
   font-size: 14px;
   color: var(--accent-magenta);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+.coverFav:hover {
+  background: #fff5fa;
+}
+.coverFav:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.coverFav:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+.coverFav:focus-visible {
+  outline: 2px solid var(--accent-magenta);
+  outline-offset: 2px;
+}
+.coverFavOn {
+  background: var(--accent-magenta);
+  color: #fff;
+}
+.coverFavOn:hover {
+  background: var(--accent-magenta);
+  filter: brightness(1.05);
+}
+@media (prefers-reduced-motion: reduce) {
+  .coverFav {
+    transition: none;
+  }
+  .coverFav:active {
+    transform: none;
+  }
 }
 .coverTitleWrap {
   position: relative;
