@@ -26,6 +26,9 @@ export type NotebookDetailEntry = {
 export type NotebookDetail = {
   id: string;
   name: string;
+  // F-NB issue #90: 表紙色。詳細ページ hero のグラデで使う。古い row は null。
+  color: string | null;
+  createdAt: Date;
   members: NotebookDetailMember[];
   entries: NotebookDetailEntry[];
   nextTurnUserId: string | null;
@@ -56,6 +59,8 @@ export async function getNotebookDetail(
     select: {
       id: true,
       name: true,
+      color: true,
+      createdAt: true,
       members: {
         orderBy: { orderIndex: "asc" },
         select: {
@@ -130,6 +135,8 @@ export async function getNotebookDetail(
   return {
     id: notebook.id,
     name: notebook.name,
+    color: notebook.color,
+    createdAt: notebook.createdAt,
     members,
     entries,
     nextTurnUserId: nextMember?.userId ?? null,

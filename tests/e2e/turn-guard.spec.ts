@@ -57,9 +57,10 @@ test("メンバーでも他人のターン中の /write 直アクセスは詳細
   await expect(
     pageA.getByRole("heading", { name: "♡ きょうの にっき" }),
   ).toHaveCount(0);
-  // 詳細ページの見出しが代わりに見える。
+  // 詳細ページの見出し (Yusei Magic タイトル) が代わりに見える。♡ プレフィックスは
+  // 旧詳細画面の名残で、新ヒーローはノート名そのものを h1 にする。
   await expect(
-    pageA.getByRole("heading", { name: "♡ ガード確認 にっき" }),
+    pageA.getByRole("heading", { name: "ガード確認 にっき" }),
   ).toBeVisible();
 
   await ctxA.close();
