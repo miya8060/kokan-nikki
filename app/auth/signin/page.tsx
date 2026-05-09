@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { requestSignIn, signInWithOAuth } from "@/app/_actions/auth";
-import { PuffButton } from "@/components/ui/PuffButton";
 import { Sticker } from "@/components/ui/Sticker";
 import { auth, oauthProviders } from "@/lib/auth";
 import {
@@ -13,6 +12,7 @@ import {
 import { pickInternalCallbackUrl } from "@/lib/safe-redirect";
 
 import { InAppBrowserNotice } from "./_components/InAppBrowserNotice";
+import { SignInSubmitButton } from "./_components/SignInSubmitButton";
 
 type SignInPageProps = {
   searchParams: Promise<{ callbackUrl?: string | string[] }>;
@@ -93,7 +93,10 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             />
           </label>
           <div className="flex justify-center pt-2">
-            <PuffButton type="submit">♡ リンクを おくる</PuffButton>
+            <SignInSubmitButton
+              idleLabel="♡ リンクを おくる"
+              pendingLabel="おくってるよ…"
+            />
           </div>
         </form>
 
@@ -110,27 +113,36 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="google" />
                   <input type="hidden" name="redirectTo" value={redirectTo} />
-                  <PuffButton type="submit" variant="alt" className="w-full">
-                    ♡ Google で さいんいん
-                  </PuffButton>
+                  <SignInSubmitButton
+                    variant="alt"
+                    className="w-full"
+                    idleLabel="♡ Google で さいんいん"
+                    pendingLabel="つないでるよ…"
+                  />
                 </form>
               )}
               {showLine && (
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="line" />
                   <input type="hidden" name="redirectTo" value={redirectTo} />
-                  <PuffButton type="submit" variant="alt" className="w-full">
-                    ♡ LINE で さいんいん
-                  </PuffButton>
+                  <SignInSubmitButton
+                    variant="alt"
+                    className="w-full"
+                    idleLabel="♡ LINE で さいんいん"
+                    pendingLabel="つないでるよ…"
+                  />
                 </form>
               )}
               {showTwitter && (
                 <form action={signInWithOAuth}>
                   <input type="hidden" name="provider" value="twitter" />
                   <input type="hidden" name="redirectTo" value={redirectTo} />
-                  <PuffButton type="submit" variant="alt" className="w-full">
-                    ♡ X で さいんいん
-                  </PuffButton>
+                  <SignInSubmitButton
+                    variant="alt"
+                    className="w-full"
+                    idleLabel="♡ X で さいんいん"
+                    pendingLabel="つないでるよ…"
+                  />
                 </form>
               )}
             </div>
