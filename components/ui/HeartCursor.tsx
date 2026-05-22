@@ -10,6 +10,14 @@ import { useEffect, useRef, useState } from "react";
  * is enabled — see lib/palette.ts in step 11). This component renders nothing
  * on touch devices (the @media (hover: none) reset in globals.css restores
  * the system cursor regardless).
+ *
+ * #136: `<dialog>.showModal()` puts the dialog on the browser top layer, which
+ * sits above every normal-stacking-context element regardless of `z-index`.
+ * We therefore mount the cursor as a `popover="manual"` element and call
+ * `showPopover()` so it is itself placed on the top layer. When another
+ * top-layer element opens (e.g. SpreadOverlay's dialog), it stacks above us;
+ * we listen for the bubbling `toggle` event and re-show our popover so we
+ * land back on top of the stack.
  */
 export function HeartCursor() {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -47,10 +55,25 @@ export function HeartCursor() {
     <div
       ref={ref}
       aria-hidden
+      // `popover` puts the element on the top layer when shown, so it renders
+      // above `<dialog>.showModal()` modals (which also live on the top layer
+      // but below the most-recently-shown entry). `manual` means we control
+      // open/close ourselves (no light-dismiss).
+      popover="manual"
       style={{
+        // Override UA `[popover]` defaults so the cursor positions purely via
+        // transform from (0,0). Without these the UA rules `inset: 0` and
+        // `margin: auto` would stretch and center the popover.
         position: "fixed",
         top: 0,
         left: 0,
+        right: "auto",
+        bottom: "auto",
+        margin: 0,
+        padding: 0,
+        border: "none",
+        background: "transparent",
+        overflow: "visible",
         width: 28,
         height: 28,
         pointerEvents: "none",
