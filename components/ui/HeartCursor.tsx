@@ -31,6 +31,22 @@ export function HeartCursor() {
     const el = ref.current;
     if (!el) return;
 
+    const supportsPopover = typeof el.showPopover === "function";
+
+    const ensureOnTop = () => {
+      if (!supportsPopover) return;
+      try {
+        if (el.matches(":popover-open")) {
+          el.hidePopover();
+        }
+        el.showPopover();
+      } catch {
+        // Element detached or browser disagreed; next ensureOnTop call retries.
+      }
+    };
+
+    ensureOnTop();
+
     const onMove = (e: MouseEvent) => {
       el.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
       if (!shown.current) {
