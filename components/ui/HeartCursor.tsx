@@ -110,10 +110,32 @@ export function HeartCursor() {
         zIndex: 9999,
         opacity: visible ? 1 : 0,
         transition: "opacity 0.15s",
-        filter: "drop-shadow(0 0 8px rgba(255, 94, 168, 0.6))",
+        // CSS `filter: drop-shadow` on a top-layer popover combined with a
+        // sibling top-layer `<dialog>` whose ::backdrop uses `backdrop-filter`
+        // forces a full-viewport backdrop re-blur on every mousemove (PR #136
+        // follow-up: cursor felt "ふらふら" over the spread overlay). The
+        // glow is now baked into SVG so the popover element itself stays a
+        // plain transformed div with no compositor-side filter chain.
+        willChange: "transform",
       }}
     >
-      <svg viewBox="0 0 28 28" width="28" height="28">
+      <svg viewBox="0 0 28 28" width="28" height="28" overflow="visible">
+        <defs>
+          <filter
+            id="heart-cursor-glow"
+            x="-50%"
+            y="-50%"
+            width="200%"
+            height="200%"
+          >
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+        </defs>
+        <path
+          d="M3 2 L3 22 L9 17 L13 26 L17 24 L13 15 L21 14 Z"
+          fill="rgba(255, 94, 168, 0.55)"
+          filter="url(#heart-cursor-glow)"
+        />
         <path
           d="M3 2 L3 22 L9 17 L13 26 L17 24 L13 15 L21 14 Z"
           fill="#ff5ea8"
