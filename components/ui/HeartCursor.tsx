@@ -10,14 +10,6 @@ import { useEffect, useRef, useState } from "react";
  * is enabled — see lib/palette.ts in step 11). This component renders nothing
  * on touch devices (the @media (hover: none) reset in globals.css restores
  * the system cursor regardless).
- *
- * #136: `<dialog>.showModal()` puts the dialog on the browser top layer, which
- * sits above every normal-stacking-context element regardless of `z-index`.
- * We therefore mount the cursor as a `popover="manual"` element and call
- * `showPopover()` so it is itself placed on the top layer. When another
- * top-layer element opens (e.g. SpreadOverlay's dialog), it stacks above us;
- * we listen for the bubbling `toggle` event and re-show our popover so we
- * land back on top of the stack.
  */
 export function HeartCursor() {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -30,35 +22,6 @@ export function HeartCursor() {
 
     const el = ref.current;
     if (!el) return;
-
-    const supportsPopover = typeof el.showPopover === "function";
-
-    const ensureOnTop = () => {
-      if (!supportsPopover) return;
-      try {
-        if (el.matches(":popover-open")) {
-          // Re-add to the top of the top-layer stack. hide+show within the
-          // same task does not paint between calls, so this is flicker-free.
-          el.hidePopover();
-        }
-        el.showPopover();
-      } catch {
-        // Element detached or browser disagreed; next ensureOnTop call retries.
-      }
-    };
-
-    ensureOnTop();
-
-    // When any other dialog/popover opens, it stacks above us in the top layer.
-    // Re-show on `toggle` (fires after the other element finishes opening) so
-    // we end up on top again.
-    const onToggle = (event: Event) => {
-      if (event.target === el) return;
-      const toggle = event as ToggleEvent;
-      if (toggle.newState !== "open") return;
-      ensureOnTop();
-    };
-    document.addEventListener("toggle", onToggle, true);
 
     const onMove = (e: MouseEvent) => {
       el.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
@@ -75,7 +38,6 @@ export function HeartCursor() {
     window.addEventListener("mousemove", onMove, { passive: true });
     window.addEventListener("mouseleave", onLeave);
     return () => {
-      document.removeEventListener("toggle", onToggle, true);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseleave", onLeave);
     };
@@ -85,25 +47,10 @@ export function HeartCursor() {
     <div
       ref={ref}
       aria-hidden
-      // `popover` puts the element on the top layer when shown, so it renders
-      // above `<dialog>.showModal()` modals (which also live on the top layer
-      // but below the most-recently-shown entry). `manual` means we control
-      // open/close ourselves (no light-dismiss).
-      popover="manual"
       style={{
-        // Override UA `[popover]` defaults so the cursor positions purely via
-        // transform from (0,0). Without these the UA rules `inset: 0` and
-        // `margin: auto` would stretch and center the popover.
         position: "fixed",
         top: 0,
         left: 0,
-        right: "auto",
-        bottom: "auto",
-        margin: 0,
-        padding: 0,
-        border: "none",
-        background: "transparent",
-        overflow: "visible",
         width: 28,
         height: 28,
         pointerEvents: "none",
