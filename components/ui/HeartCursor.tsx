@@ -37,6 +37,8 @@ export function HeartCursor() {
       if (!supportsPopover) return;
       try {
         if (el.matches(":popover-open")) {
+          // Re-add to the top of the top-layer stack. hide+show within the
+          // same task does not paint between calls, so this is flicker-free.
           el.hidePopover();
         }
         el.showPopover();
@@ -47,6 +49,9 @@ export function HeartCursor() {
 
     ensureOnTop();
 
+    // When any other dialog/popover opens, it stacks above us in the top layer.
+    // Re-show on `toggle` (fires after the other element finishes opening) so
+    // we end up on top again.
     const onToggle = (event: Event) => {
       if (event.target === el) return;
       const toggle = event as ToggleEvent;
