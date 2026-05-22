@@ -47,6 +47,14 @@ export function HeartCursor() {
 
     ensureOnTop();
 
+    const onToggle = (event: Event) => {
+      if (event.target === el) return;
+      const toggle = event as ToggleEvent;
+      if (toggle.newState !== "open") return;
+      ensureOnTop();
+    };
+    document.addEventListener("toggle", onToggle, true);
+
     const onMove = (e: MouseEvent) => {
       el.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
       if (!shown.current) {
@@ -62,6 +70,7 @@ export function HeartCursor() {
     window.addEventListener("mousemove", onMove, { passive: true });
     window.addEventListener("mouseleave", onLeave);
     return () => {
+      document.removeEventListener("toggle", onToggle, true);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseleave", onLeave);
     };
