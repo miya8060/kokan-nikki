@@ -15,8 +15,8 @@ importers:
         specifier: ^6
         version: 6.19.3(prisma@6.19.3(typescript@6.0.3))(typescript@6.0.3)
       '@vercel/blob':
-        specifier: ^2.3.3
-        version: 2.3.3
+        specifier: ^2.4.0
+        version: 2.4.0
       next:
         specifier: 16.2.6
         version: 16.2.6(@babel/core@7.29.0)(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -1225,8 +1225,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@vercel/blob@2.3.3':
-    resolution: {integrity: sha512-MtD7VLo6hU07eHR7bmk5SIMD290q574UaNYTe46qeyRT+hWrCy26CoAqfd7PnIefVXvRehRZBzukxuTO9iGTVg==}
+  '@vercel/blob@2.4.0':
+    resolution: {integrity: sha512-ncQ8CRb6XoEAYJwjOTRGpACRT6h/AeY+/33gLyeVxG5BIes27OPm1jmqreF+JHjcTmGhClTP+kBpmyLfbV0xew==}
     engines: {node: '>=20.0.0'}
 
   '@vitest/coverage-v8@4.1.5':
@@ -3195,11 +3195,11 @@ packages:
     resolution: {integrity: sha512-Bf+ILmBgretUrdJxzXM0SgXLZ3XfiaUuOj/IKQHuTXip+05Xn+uyEYdVg0kYDipTBcLrCVyUzAPz7QmArb0mmw==}
     engines: {node: '>=14.0.0'}
 
-  tldts-core@7.0.30:
-    resolution: {integrity: sha512-uiHN8PIB1VmWyS98eZYja4xzlYqeFZVjb4OuYlJQnZAuJhMw4PbKQOKgHKhBdJR3FE/t5mUQ1Kd80++B+qhD1Q==}
+  tldts-core@7.1.2:
+    resolution: {integrity: sha512-26EbERPLf5wkNFKW+7egxArSPN1Nqipe/PIe1nvhpNu8HqQeY2pYdOeQk4sAiADv/e03VzHkLY0PPohKv1JMAQ==}
 
-  tldts@7.0.30:
-    resolution: {integrity: sha512-ELrFxuqsDdHUwoh0XxDbxuLD3Wnz49Z57IFvTtvWy1hJdcMZjXLIuonjilCiWHlT2GbE4Wlv1wKVTzDFnXH1aw==}
+  tldts@7.1.2:
+    resolution: {integrity: sha512-RUX5sQm8bl03ycwQ6nSgJiKw9FZWhA8GBzxX6X1lsG3xKzFIW+lYLLpM30FQbDD6XjTWa/VkF15VxjnAMWYJAQ==}
     hasBin: true
 
   tmp@0.2.5:
@@ -4458,7 +4458,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@vercel/blob@2.3.3':
+  '@vercel/blob@2.4.0':
     dependencies:
       async-retry: 1.3.3
       is-buffer: 2.0.5
@@ -6712,12 +6712,12 @@ snapshots:
 
   tinyrainbow@3.1.0: {}
 
-  tldts-core@7.0.30:
+  tldts-core@7.1.2:
     optional: true
 
-  tldts@7.0.30:
+  tldts@7.1.2:
     dependencies:
-      tldts-core: 7.0.30
+      tldts-core: 7.1.2
     optional: true
 
   tmp@0.2.5: {}
@@ -6728,7 +6728,7 @@ snapshots:
 
   tough-cookie@6.0.1:
     dependencies:
-      tldts: 7.0.30
+      tldts: 7.1.2
     optional: true
 
   ts-api-utils@2.5.0(typescript@6.0.3):
